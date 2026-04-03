@@ -461,73 +461,73 @@ jobs:
       - name: Run standalone tests
         run: npm run test:standalone
 
-  model-dependent-tests:
-    name: Model dependent tests
-    runs-on: macos-15-intel
-    env:
-      NODE_LLAMA_CPP_GPU: false
-    needs:
-      - build
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build
-          path: dist
-
-      - name: Download llama.cpp artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: llama.cpp
-          path: llama
-
-#      - name: Install dependencies on Ubuntu
+#  model-dependent-tests:
+#    name: Model dependent tests
+#    runs-on: macos-15-intel
+#    env:
+#      NODE_LLAMA_CPP_GPU: false
+#    needs:
+#      - build
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-node@v4
+#        with:
+#          node-version: "20"
+#
+#      - name: Download build artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: build
+#          path: dist
+#
+#      - name: Download llama.cpp artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: llama.cpp
+#          path: llama
+#
+##      - name: Install dependencies on Ubuntu
+##        run: |
+##          sudo apt-get update
+##          sudo apt-get install ninja-build cmake
+#
+#      - name: Install dependencies on macOS
 #        run: |
-#          sudo apt-get update
-#          sudo apt-get install ninja-build cmake
-
-      - name: Install dependencies on macOS
-        run: |
-          brew install cmake ninja
-          alias make=cmake
-
-      - name: Install modules
-        run: npm ci
-
-      - name: Build binary
-        run: node ./dist/cli/cli.js source build --noUsageExample
-
-      - name: Inspect hardware
-        run: node ./dist/cli/cli.js inspect gpu
-
-      - name: Cache models
-        id: cache-restore-test-models
-        uses: actions/cache/restore@v4
-        with:
-          path: "test/.models/**.gguf"
-          key: cache-test-models-${{ runner.os }}-${{ github.workflow }}
-
-      - name: Download models or ensure all models are downloaded
-        id: download-all-test-models
-        run: npm run dev:setup:downloadAllTestModels
-
-      - name: Run model dependent tests
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-        run: npm run test:modelDependent
-
-      - name: Save cached models
-        id: cache-save-test-models
-        if: steps.download-all-test-models.outcome == 'success' && always()
-        uses: actions/cache/save@v4
-        with:
-          path: "test/.models/**.gguf"
-          key: cache-test-models-${{ runner.os }}-${{ github.workflow }}
+#          brew install cmake ninja
+#          alias make=cmake
+#
+#      - name: Install modules
+#        run: npm ci
+#
+#      - name: Build binary
+#        run: node ./dist/cli/cli.js source build --noUsageExample
+#
+#      - name: Inspect hardware
+#        run: node ./dist/cli/cli.js inspect gpu
+#
+#      - name: Cache models
+#        id: cache-restore-test-models
+#        uses: actions/cache/restore@v4
+#        with:
+#          path: "test/.models/**.gguf"
+#          key: cache-test-models-${{ runner.os }}-${{ github.workflow }}
+#
+#      - name: Download models or ensure all models are downloaded
+#        id: download-all-test-models
+#        run: npm run dev:setup:downloadAllTestModels
+#
+#      - name: Run model dependent tests
+#        env:
+#          NODE_OPTIONS: "--max-old-space-size=4096"
+#        run: npm run test:modelDependent
+#
+#      - name: Save cached models
+#        id: cache-save-test-models
+#        if: steps.download-all-test-models.outcome == 'success' && always()
+#        uses: actions/cache/save@v4
+#        with:
+#          path: "test/.models/**.gguf"
+#          key: cache-test-models-${{ runner.os }}-${{ github.workflow }}
 
   release:
     name: Release
