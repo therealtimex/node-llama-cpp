@@ -384,13 +384,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
+          DEBUG: "semantic-release:*"
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git fetch --tags --force
-          git checkout master
+          git fetch origin master --tags --force
+          git checkout -B master origin/master
           git reset --hard origin/master
-
+          
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
           npx semantic-release
 
