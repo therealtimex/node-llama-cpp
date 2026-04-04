@@ -354,7 +354,13 @@ jobs:
       - name: Resolve next release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx --no vite-node ./scripts/resolveNextReleaseVersion.ts --saveReleaseToFile ./semanticReleaseDryRunReleaseResult.json --saveVersionToFile ./resolvedNextVersion.txt
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git fetch origin master
+          git checkout master
+          git reset --hard origin/master
+          npx --no vite-node ./scripts/resolveNextReleaseVersion.ts --saveReleaseToFile ./semanticReleaseDryRunReleaseResult.json --saveVersionToFile ./resolvedNextVersion.txt
       - name: Save next version output
         id: save-next-version
         run: echo "next-version=$(cat ./resolvedNextVersion.txt)" >> $GITHUB_OUTPUT
@@ -450,10 +456,17 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
         run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git fetch origin master
+          git checkout master
+          git reset --hard origin/master
+
           export DRY_RUN_RESULT_FILE_PATH="$(pwd)/semanticReleaseDryRunReleaseResult.json"
 
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
           npx semantic-release
+
       - name: Set npm package url to GITHUB_OUTPUT
         id: set-npm-url
         run: |
