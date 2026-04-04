@@ -36,7 +36,8 @@ const githubPluginConfig = {
     discussionCategoryName: "Releases" as string | boolean
 };
 
-const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
+const config: GlobalConfig = {
+    repositoryUrl: "https://github.com/therealtimex/node-llama-cpp.git",
     branches: [
         "master",
         {name: "beta", prerelease: true}
