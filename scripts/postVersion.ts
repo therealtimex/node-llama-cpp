@@ -61,9 +61,19 @@ if (await fs.pathExists(packageLockPath)) {
         delete packageLock.packages[packageName];
     }
 
+    for (const packageName of Object.keys(packageLock.packages ?? {})) {
+        if (!packageName.startsWith("node_modules/@realtimex/node-llama-cpp-"))
+            continue;
+
+        delete packageLock.packages[packageName];
+    }
+
     for (const packageName of Object.keys(packageJson.optionalDependencies ?? {})) {
         packageLock.packages ??= {};
-        packageLock.packages[`node_modules/${packageName}`] = {optional: true};
+        packageLock.packages[`node_modules/${packageName}`] = {
+            version: currentVersion,
+            optional: true
+        };
     }
 
     await fs.writeJson(packageLockPath, packageLock, {spaces: 2});
