@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install modules
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Build
         run: npm run build
       - name: Download latest llama.cpp release
@@ -338,7 +338,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install modules
-        run: npm ci
+        run: npm ci --ignore-scripts
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
