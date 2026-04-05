@@ -55,32 +55,13 @@ jobs:
 
   build-binaries:
     name: Build binaries - ${{ matrix.config.name }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.release_smoke != true || matrix.config.artifact == 'mac-arm64' }}
     needs:
       - build
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - name: "Windows (1)"
-            os: windows-2022
-            artifact: "win-1"
-          - name: "Windows (2)"
-            os: windows-2022
-            artifact: "win-2"
-          - name: "Ubuntu (1)"
-            os: ubuntu-22.04
-            artifact: "linux-1"
-          - name: "Ubuntu (2)"
-            os: ubuntu-22.04
-            artifact: "linux-2"
-          - name: "macOS x64"
-            os: macos-15-intel
-            artifact: "mac-x64"
-          - name: "macOS arm64"
-            os: macos-26
-            artifact: "mac-arm64"
+        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.release_smoke == true) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
 
     steps:
       - uses: actions/checkout@v4
