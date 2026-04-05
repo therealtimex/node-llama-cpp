@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install modules
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: ESLint
         run: npx eslint
       - name: TypeScript validity
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install modules
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Build
         run: npm run build
       - name: Download latest llama.cpp release
