@@ -6,6 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJsonPath = path.join(__dirname, "..", "package.json");
 const packageLockPath = path.join(__dirname, "..", "package-lock.json");
 const standalonePackagesDirectory = path.join(__dirname, "..", "packages", "@realtimex");
+const skippedStandalonePackages = new Set([
+    "@realtimex/node-llama-cpp-linux-x64-cuda-ext",
+    "@realtimex/node-llama-cpp-win-x64-cuda-ext"
+]);
 
 const packageJson = await fs.readJson(packageJsonPath);
 const versionArgIndex = process.argv.indexOf("--version");
@@ -24,6 +28,12 @@ if (packageJson.optionalDependencies != null) {
     for (const packageName of Object.keys(packageJson.optionalDependencies)) {
         if (!packageName.startsWith("@realtimex/"))
             continue;
+
+        if (skippedStandalonePackages.has(packageName)) {
+            console.info(`Removing optional dependency "${packageName}" because the package exceeds npm's publish size limit`);
+            delete packageJson.optionalDependencies[packageName];
+            continue;
+        }
 
         console.info(`Updating optional dependency "${packageName}" to version "${currentVersion}"`);
         packageJson.optionalDependencies[packageName] = currentVersion;
@@ -72,6 +82,9 @@ if (await fs.pathExists(standalonePackagesDirectory)) {
             continue;
 
         const standalonePackageJson = await fs.readJson(standalonePackageJsonPath);
+        if (skippedStandalonePackages.has(standalonePackageJson.name))
+            continue;
+
         standalonePackageJson.version = currentVersion;
         standalonePackageJson.publishConfig ??= {};
         standalonePackageJson.publishConfig.access = "public";

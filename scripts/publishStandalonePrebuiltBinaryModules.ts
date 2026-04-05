@@ -15,6 +15,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
 const packageScope = "@realtimex";
 const subPackagesDirectory = path.join(packageDirectory, packageScope);
+const skippedPackages = new Set([
+    "node-llama-cpp-linux-x64-cuda-ext",
+    "node-llama-cpp-win-x64-cuda-ext"
+]);
 
 const argv = await yargs(hideBin(process.argv))
     .option("packageVersion", {
@@ -38,6 +42,11 @@ const packageNames = (await fs.readdir(subPackagesDirectory))
     });
 
 for (const packageName of packageNames) {
+    if (skippedPackages.has(packageName)) {
+        console.info(`Skipping "${packageScope}/${packageName}" because the tarball exceeds npm's publish size limit`);
+        continue;
+    }
+
     const packagePath = path.join(subPackagesDirectory, packageName);
     const packagePackageJsonPath = path.join(packagePath, "package.json");
 

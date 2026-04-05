@@ -308,6 +308,12 @@ jobs:
     name: Release smoke
     if: github.event_name == 'workflow_dispatch' && inputs.release_smoke == true
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+      discussions: write
     needs:
       - build
       - build-binaries
@@ -356,7 +362,6 @@ jobs:
       - name: Smoke semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
           DEBUG: "semantic-release:*"
         run: |
@@ -443,7 +448,6 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
           SKIP_STANDALONE_PREBUILT_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_publish == true }}
           DEBUG: "semantic-release:*"
