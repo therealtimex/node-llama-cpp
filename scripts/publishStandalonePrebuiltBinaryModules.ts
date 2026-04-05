@@ -54,9 +54,9 @@ for (const packageName of packageNames) {
 
     if (GH_RELEASE_REF === "refs/heads/beta") {
         console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}" to "beta" tag`);
-        await $`npm publish --tag beta`;
+        await $`npm publish --access public --tag beta`;
     } else {
         console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}"`);
-        await $`npm publish`;
+        await $`npm publish --access public`;
     }
 }

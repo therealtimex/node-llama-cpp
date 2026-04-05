@@ -237,5 +237,8 @@
     "@realtimex/node-llama-cpp-win-x64-cuda": "0.2.0",
     "@realtimex/node-llama-cpp-win-x64-cuda-ext": "0.2.0",
     "@realtimex/node-llama-cpp-win-x64-vulkan": "0.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

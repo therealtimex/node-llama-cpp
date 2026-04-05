@@ -17,6 +17,8 @@ if (typeof currentVersion !== "string" || currentVersion.length === 0)
     throw new Error("A non-empty version is required");
 
 packageJson.version = currentVersion;
+packageJson.publishConfig ??= {};
+packageJson.publishConfig.access = "public";
 
 if (packageJson.optionalDependencies != null) {
     for (const packageName of Object.keys(packageJson.optionalDependencies)) {
@@ -71,6 +73,8 @@ if (await fs.pathExists(standalonePackagesDirectory)) {
 
         const standalonePackageJson = await fs.readJson(standalonePackageJsonPath);
         standalonePackageJson.version = currentVersion;
+        standalonePackageJson.publishConfig ??= {};
+        standalonePackageJson.publishConfig.access = "public";
         await fs.writeJson(standalonePackageJsonPath, standalonePackageJson, {spaces: 2});
 
         if (!(await fs.pathExists(standalonePackageLockPath)))

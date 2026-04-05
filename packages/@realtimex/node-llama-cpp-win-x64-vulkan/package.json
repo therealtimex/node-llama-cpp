@@ -47,5 +47,8 @@
   "homepage": "https://node-llama-cpp.withcat.ai",
   "devDependencies": {
     "typescript": "^5.2.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
