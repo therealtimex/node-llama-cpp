@@ -43,7 +43,7 @@
   },
   "scripts": {
     "prepare": "node --experimental-require-module -e \"process.env.CI !== 'true' && console.log(require('husky').default())\"",
-    "postinstall": "cd templates && npm install",
+    "postinstall": "node ./dist/cli/cli.js postinstall",
     "postversion": "vite-node scripts/postVersion.ts",
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "build": "tsc --build tsconfig.json --force && npm run build:packTemplates",
