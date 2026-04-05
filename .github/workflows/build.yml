@@ -11,6 +11,10 @@ on:
         description: "Build only macOS arm64 and run release dry-run checks"
         type: boolean
         default: false
+      release_publish:
+        description: "Build only macOS arm64 and publish the selected branch to npm"
+        type: boolean
+        default: false
 
 
 jobs:
@@ -61,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.release_smoke == true) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
+        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && (inputs.release_smoke == true || inputs.release_publish == true)) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -361,7 +365,9 @@ jobs:
 
   release:
     name: Release
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.release_publish == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'))
     runs-on: ubuntu-latest
     concurrency: release-${{ github.ref }}
     environment:
@@ -397,13 +403,17 @@ jobs:
           mv artifacts/bins-*/* bins/
           mv artifacts/build dist/
 
-          mkdir -p ./bins/win-x64-cuda/fallback
-          mv ./bins/win-x64-cuda-2/ggml-cuda.dll ./bins/win-x64-cuda/fallback/ggml-cuda.dll
-          rm -rf ./bins/win-x64-cuda-2
+          if [ -d ./bins/win-x64-cuda-2 ]; then
+            mkdir -p ./bins/win-x64-cuda/fallback
+            mv ./bins/win-x64-cuda-2/ggml-cuda.dll ./bins/win-x64-cuda/fallback/ggml-cuda.dll
+            rm -rf ./bins/win-x64-cuda-2
+          fi
 
-          mkdir -p ./bins/linux-x64-cuda/fallback
-          mv ./bins/linux-x64-cuda-2/libggml-cuda.so ./bins/linux-x64-cuda/fallback/libggml-cuda.so
-          rm -rf ./bins/linux-x64-cuda-2
+          if [ -d ./bins/linux-x64-cuda-2 ]; then
+            mkdir -p ./bins/linux-x64-cuda/fallback
+            mv ./bins/linux-x64-cuda-2/libggml-cuda.so ./bins/linux-x64-cuda/fallback/libggml-cuda.so
+            rm -rf ./bins/linux-x64-cuda-2
+          fi
 
           cp -r artifacts/llama.cpp/llama.cpp/grammars llama/grammars
 
@@ -423,8 +433,10 @@ jobs:
           echo "Built binaries:"
           ls bins
       - name: Move binaries to standalone prebuilt binary modules
+        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts
       - name: Prepare standalone prebuilt binary modules
+        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
@@ -433,6 +445,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
+          SKIP_STANDALONE_PREBUILT_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_publish == true }}
           DEBUG: "semantic-release:*"
         run: |
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch

@@ -75,7 +75,7 @@ const config: GlobalConfig = {
         }],
         ["@semantic-release/exec", {
             prepareCmd: "npx --no vite-node ./scripts/postVersion.ts --version \"${nextRelease.version}\"",
-            publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
+            publishCmd: "if [ \"$SKIP_STANDALONE_PREBUILT_PUBLISH\" = \"true\" ]; then echo \"Skipping standalone prebuilt binary module publish\"; else npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\"; fi"
         }],
         "@semantic-release/npm",
         ["@semantic-release/github", githubPluginConfig],
