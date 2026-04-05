@@ -1,6 +1,6 @@
 {
   "name": "@realtimex/node-llama-cpp-win-x64-vulkan",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Prebuilt binary for node-llama-cpp for Windows x64 with Vulkan support",
   "main": "dist/index.js",
   "type": "module",
@@ -21,8 +21,12 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "os": ["win32"],
-  "cpu": ["x64"],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "build": "tsc --build tsconfig.json --force",

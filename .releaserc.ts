@@ -38,6 +38,7 @@ const githubPluginConfig = {
 
 const config: GlobalConfig = {
     repositoryUrl: "https://github.com/therealtimex/node-llama-cpp.git",
+    tagFormat: "realtimex-v${version}",
     branches: [
         "master",
         {name: "beta", prerelease: true}
@@ -73,6 +74,7 @@ const config: GlobalConfig = {
             }
         }],
         ["@semantic-release/exec", {
+            prepareCmd: "npx --no vite-node ./scripts/postVersion.ts --version \"${nextRelease.version}\"",
             publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
         }],
         "@semantic-release/npm",

@@ -6,6 +6,11 @@ on:
       - beta
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_smoke:
+        description: "Build only macOS arm64 and run release dry-run checks"
+        type: boolean
+        default: false
 
 
 jobs:
@@ -50,6 +55,7 @@ jobs:
 
   build-binaries:
     name: Build binaries - ${{ matrix.config.name }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.release_smoke != true || matrix.config.artifact == 'mac-arm64' }}
     needs:
       - build
     runs-on: ${{ matrix.config.os }}
@@ -202,7 +208,7 @@ jobs:
         env:
           ARTIFACT_NAME: ${{ matrix.config.artifact }}
         run: |
-          npm ci
+          npm ci --ignore-scripts
 
           npx zx -y <<'EOF'
 
@@ -313,8 +319,68 @@ jobs:
           name: "bins-${{ matrix.config.artifact }}"
           path: "bins/*"
 
+  release-smoke:
+    name: Release smoke
+    if: github.event_name == 'workflow_dispatch' && inputs.release_smoke == true
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - build-binaries
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          lfs: true
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install modules
+        run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Move smoke artifacts
+        run: |
+          mkdir -p bins
+          mv artifacts/bins-*/* bins/
+          mv artifacts/build dist/
+
+          cp -r artifacts/llama.cpp/llama.cpp/grammars llama/grammars
+
+          rm -f ./llama/binariesGithubRelease.json
+          mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
+
+          rm -f ./llama/llama.cpp.info.json
+          mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
+
+          rm -f ./llama/gitRelease.bundle
+          mv artifacts/llama.cpp/gitRelease.bundle ./llama/gitRelease.bundle
+
+          mv artifacts/build-templates templates/packed/
+          rm -f ./templates/package.json
+          rm -f ./templates/package-lock.json
+
+          echo "Built smoke binaries:"
+          ls bins
+      - name: Add "postinstall" script to package.json
+        run: npm run addPostinstallScript
+      - name: Validate npm package
+        run: npm publish --dry-run
+      - name: Smoke semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_RELEASE_REF: ${{ github.ref }}
+          DEBUG: "semantic-release:*"
+        run: |
+          git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
+          npx semantic-release --dry-run
+
   release:
     name: Release
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')
     runs-on: ubuntu-latest
     concurrency: release-${{ github.ref }}
     environment:
@@ -332,8 +398,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           lfs: true
           fetch-depth: 0
+          fetch-tags: true
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -386,12 +454,6 @@ jobs:
           GH_RELEASE_REF: ${{ github.ref }}
           DEBUG: "semantic-release:*"
         run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git fetch origin master --tags --force
-          git checkout -B master origin/master
-          git reset --hard origin/master
-          
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
           npx semantic-release
 
