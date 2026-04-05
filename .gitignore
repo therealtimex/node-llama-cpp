@@ -39,3 +39,4 @@ node_modules
 /llama/xpack/xpacks
 /llama/xpack/cmakeInstall.lock
 /bins
+/.release-assets

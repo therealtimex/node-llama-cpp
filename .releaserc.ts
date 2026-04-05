@@ -32,9 +32,16 @@ const newFooterTemplate = defaultFooterTemplate + "\n---\n\n" +
     `> To use the latest \`llama.cpp\` release available, run \`npx -n ${cliBinName} source download --release latest\`. ([learn more](${homepageUrlWithoutTrailingSlash}/guide/building-from-source#download-new-release))\n`;
 /* eslint-enable @stylistic/max-len */
 
-const githubPluginConfig = {
+const githubReleaseAssetsDirectory = ".release-assets";
+const githubPluginConfig: {
+    discussionCategoryName: string | boolean,
+    assets?: string[]
+} = {
     discussionCategoryName: "Releases" as string | boolean
 };
+
+if (fs.pathExistsSync(githubReleaseAssetsDirectory) && fs.readdirSync(githubReleaseAssetsDirectory).length > 0)
+    githubPluginConfig.assets = [`${githubReleaseAssetsDirectory}/*`];
 
 const config: GlobalConfig = {
     repositoryUrl: "https://github.com/therealtimex/node-llama-cpp.git",

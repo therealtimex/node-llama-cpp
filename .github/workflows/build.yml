@@ -7,7 +7,7 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      release_smoke:
+      release_dry_run:
         description: "Build only macOS arm64 and run release dry-run checks"
         type: boolean
         default: false
@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && (inputs.release_smoke == true || inputs.release_publish == true)) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
+        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && (inputs.release_dry_run == true || inputs.release_publish == true)) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -304,9 +304,9 @@ jobs:
           name: "bins-${{ matrix.config.artifact }}"
           path: "bins/*"
 
-  release-smoke:
-    name: Release smoke
-    if: github.event_name == 'workflow_dispatch' && inputs.release_smoke == true
+  release-dry-run:
+    name: Release dry run
+    if: github.event_name == 'workflow_dispatch' && inputs.release_dry_run == true
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -357,6 +357,8 @@ jobs:
           ls bins
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
+      - name: Prepare GitHub release assets
+        run: npx --no vite-node ./scripts/prepareGithubReleaseAssets.ts
       - name: Validate npm package
         run: npm publish --dry-run
       - name: Smoke semantic-release
@@ -437,6 +439,8 @@ jobs:
 
           echo "Built binaries:"
           ls bins
+      - name: Prepare GitHub release assets
+        run: npx --no vite-node ./scripts/prepareGithubReleaseAssets.ts
       - name: Move binaries to standalone prebuilt binary modules
         if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts

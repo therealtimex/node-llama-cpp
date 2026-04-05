@@ -1,5 +1,5 @@
 <div align="center">
-    <a href="https://node-llama-cpp.withcat.ai" target="_blank"><img alt="node-llama-cpp Logo" src="https://raw.githubusercontent.com/withcatai/node-llama-cpp/master/assets/logo.v3.roundEdges.avif" width="360px" /></a>
+    <a href="https://node-llama-cpp.withcat.ai" target="_blank"><img alt="node-llama-cpp Logo" src="https://raw.githubusercontent.com/therealtimex/node-llama-cpp/master/assets/logo.v3.roundEdges.avif" width="360px" /></a>
     <h1>node-llama-cpp</h1>
     <p>Run AI models locally on your machine</p>
     <sub>Pre-built bindings are provided with a fallback to building from source with cmake</sub>
@@ -8,10 +8,10 @@
 
 <div align="center" class="main-badges">
 
-[![Build](https://github.com/withcatai/node-llama-cpp/actions/workflows/build.yml/badge.svg)](https://github.com/withcatai/node-llama-cpp/actions/workflows/build.yml)
-[![License](https://badgen.net/badge/color/MIT/green?label=license)](https://www.npmjs.com/package/node-llama-cpp)
-[![Types](https://badgen.net/badge/color/TypeScript/blue?label=types)](https://www.npmjs.com/package/node-llama-cpp)
-[![Version](https://badgen.net/npm/v/node-llama-cpp)](https://www.npmjs.com/package/node-llama-cpp)
+[![Build](https://github.com/therealtimex/node-llama-cpp/actions/workflows/build.yml/badge.svg)](https://github.com/therealtimex/node-llama-cpp/actions/workflows/build.yml)
+[![License](https://badgen.net/badge/color/MIT/green?label=license)](https://www.npmjs.com/package/@realtimex/node-llama-cpp)
+[![Types](https://badgen.net/badge/color/TypeScript/blue?label=types)](https://www.npmjs.com/package/@realtimex/node-llama-cpp)
+[![Version](https://badgen.net/npm/v/@realtimex/node-llama-cpp)](https://www.npmjs.com/package/@realtimex/node-llama-cpp)
 
 </div>
 
@@ -37,30 +37,30 @@
 * [API reference](https://node-llama-cpp.withcat.ai/api/functions/getLlama)
 * [CLI help](https://node-llama-cpp.withcat.ai/cli/)
 * [Blog](https://node-llama-cpp.withcat.ai/blog/)
-* [Changelog](https://github.com/withcatai/node-llama-cpp/releases)
-* [Roadmap](https://github.com/orgs/withcatai/projects/1)
+* [Changelog](https://github.com/therealtimex/node-llama-cpp/releases)
 
 ## Try It Without Installing
 Chat with a model in your terminal using [a single command](https://node-llama-cpp.withcat.ai/cli/chat):
 ```bash
-npx -y node-llama-cpp chat
+npx -y @realtimex/node-llama-cpp chat
 ```
 
 ## Installation
 ```bash
-npm install node-llama-cpp
+npm install @realtimex/node-llama-cpp
 ```
 
 [This package comes with pre-built binaries](https://node-llama-cpp.withcat.ai/guide/building-from-source) for macOS, Linux and Windows.
 
-If binaries are not available for your platform, it'll fallback to download a release of `llama.cpp` and build it from source with `cmake`.
+On `linux-x64` and `win-x64` with CUDA, the large fallback CUDA backend may be downloaded from the matching GitHub release the first time it is needed.
+If pre-built binaries are not available for your platform, or the downloaded CUDA fallback backend still does not work with your machine, it'll fallback to download a release of `llama.cpp` and build it from source with `cmake`.
 To disable this behavior, set the environment variable `NODE_LLAMA_CPP_SKIP_DOWNLOAD` to `true`.
 
 ## Usage
 ```typescript
 import {fileURLToPath} from "url";
 import path from "path";
-import {getLlama, LlamaChatSession} from "node-llama-cpp";
+import {getLlama, LlamaChatSession} from "@realtimex/node-llama-cpp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -100,7 +100,7 @@ To contribute to `node-llama-cpp` read the [contribution guide](https://node-lla
 <br />
 
 <div align="center" width="360">
-    <img alt="Star please" src="https://raw.githubusercontent.com/withcatai/node-llama-cpp/master/assets/star.please.roundEdges.png" width="360" margin="auto" />
+    <img alt="Star please" src="https://raw.githubusercontent.com/therealtimex/node-llama-cpp/master/assets/star.please.roundEdges.png" width="360" margin="auto" />
     <br/>
     <p align="right">
         <i>If you like this repo, star it ✨</i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

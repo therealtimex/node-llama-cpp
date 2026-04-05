@@ -11,9 +11,13 @@ and these are automatically used when CUDA is detected on your machine.
 To use `node-llama-cpp`'s CUDA support with your NVIDIA GPU,
 make sure you have [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) 13.1 or higher installed on your machine.
 
-If the pre-built binaries don't work with your CUDA installation,
+On `linux-x64` and `win-x64`, `node-llama-cpp` can also download a larger fallback CUDA backend from the matching GitHub release the first time it is needed.
+
+If the pre-built binaries and the downloaded fallback CUDA backend still don't work with your CUDA installation,
 `node-llama-cpp` will automatically download a release of `llama.cpp` and build it from source with CUDA support.
 Building from source with CUDA support is slow and can take up to an hour.
+
+> In offline or locked-down environments, allow access to GitHub Releases ahead of time or build `llama.cpp` from source manually.
 
 The pre-built binaries are compiled with CUDA Toolkits 12.4 and 13.1,
 so any CUDA Toolkit 12 that's on version 12.4 or higher or CUDA Toolkit 13 on version 13.1 or higher should work with the pre-built binaries.
@@ -23,7 +27,7 @@ consider updating it to avoid having to wait the long build time.
 ## Testing CUDA Support
 To check whether the CUDA support works on your machine, run this command:
 ```shell
-npx --no node-llama-cpp inspect gpu
+npx --no @realtimex/node-llama-cpp inspect gpu
 ```
 
 You should see an output like this:
@@ -50,7 +54,7 @@ If you see `CUDA used VRAM` in the output, it means that CUDA support is working
 ## Manually Building `node-llama-cpp` With CUDA Support {#building}
 Run this command inside of your project:
 ```shell
-npx --no node-llama-cpp source download --gpu cuda
+npx --no @realtimex/node-llama-cpp source download --gpu cuda
 ```
 
 > If `cmake` is not installed on your machine, `node-llama-cpp` will automatically download `cmake` to an internal directory and try to use it to build `llama.cpp` from source.

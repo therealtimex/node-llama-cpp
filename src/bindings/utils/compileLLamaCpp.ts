@@ -24,6 +24,7 @@ import {testCmakeBinary} from "./testCmakeBinary.js";
 import {getCudaNvccPaths} from "./detectAvailableComputeLayers.js";
 import {detectWindowsBuildTools} from "./detectBuildTools.js";
 import {asyncSome} from "./asyncSome.js";
+import {ensurePrebuiltBinariesGithubReleaseAssetForBuildOptions} from "./prebuiltBinariesGithubReleaseAssets.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const buildConfigType: "Release" | "RelWithDebInfo" | "Debug" = "Release";
@@ -544,7 +545,8 @@ export async function checkWhetherPrebuiltBinariesModuleIsInstalled(gpu: BuildGp
 function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: {
     platform: BinaryPlatform,
     arch: typeof process.arch,
-    gpu: BuildGpu
+    gpu: BuildGpu,
+    progressLogs?: boolean
 }) {
     async function getBinariesPathFromModules(moduleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>) {
         try {
@@ -567,20 +569,21 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: {
     }
 
     async function getBinariesPathFromModulesWithExtModule(
+        currentBuildOptions: typeof buildOptions,
         moduleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>,
         extModuleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>
     ) {
-        const [
-            moduleBinsDir,
-            extModuleBinsDir
-        ] = await Promise.all([
-            getBinariesPathFromModules(moduleImport),
-            getBinariesPathFromModules(extModuleImport)
-        ]);
+        const moduleBinsDir = await getBinariesPathFromModules(moduleImport);
 
         if (moduleBinsDir == null)
             return null;
-        else if (extModuleBinsDir == null)
+
+        let extModuleBinsDir = await getBinariesPathFromModules(extModuleImport);
+
+        if (extModuleBinsDir == null)
+            extModuleBinsDir = await ensurePrebuiltBinariesGithubReleaseAssetForBuildOptions(currentBuildOptions);
+
+        if (extModuleBinsDir == null)
             return moduleBinsDir;
 
         return {
@@ -601,6 +604,7 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: {
         if (buildOptions.arch === "x64") {
             if (buildOptions.gpu === "cuda")
                 return getBinariesPathFromModulesWithExtModule(
+                    buildOptions,
                     // @ts-ignore
                     () => import("@realtimex/node-llama-cpp-linux-x64-cuda"),
                     // @ts-ignore
@@ -622,6 +626,7 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: {
         if (buildOptions.arch === "x64") {
             if (buildOptions.gpu === "cuda")
                 return getBinariesPathFromModulesWithExtModule(
+                    buildOptions,
                     // @ts-ignore
                     () => import("@realtimex/node-llama-cpp-win-x64-cuda"),
                     // @ts-ignore
