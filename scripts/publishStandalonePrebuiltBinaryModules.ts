@@ -19,6 +19,21 @@ const skippedPackages = new Set([
     "node-llama-cpp-linux-x64-cuda-ext",
     "node-llama-cpp-win-x64-cuda-ext"
 ]);
+const allowSkippedPackages = env.get("ALLOW_SKIPPED_PACKAGES")
+    .default("false")
+    .asBoolStrict();
+const selectedPackages = new Set(
+    env.get("STANDALONE_PACKAGES")
+        .default("")
+        .asString()
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+);
+const standaloneDistTag = env.get("STANDALONE_DIST_TAG")
+    .default("")
+    .asString()
+    .trim();
 
 const argv = await yargs(hideBin(process.argv))
     .option("packageVersion", {
@@ -42,7 +57,16 @@ const packageNames = (await fs.readdir(subPackagesDirectory))
     });
 
 for (const packageName of packageNames) {
-    if (skippedPackages.has(packageName)) {
+    if (
+        selectedPackages.size > 0 &&
+        !selectedPackages.has(packageName) &&
+        !selectedPackages.has(`${packageScope}/${packageName}`)
+    ) {
+        console.info(`Skipping "${packageScope}/${packageName}" because it is not in STANDALONE_PACKAGES`);
+        continue;
+    }
+
+    if (!allowSkippedPackages && skippedPackages.has(packageName)) {
         console.info(`Skipping "${packageScope}/${packageName}" because the tarball exceeds npm's publish size limit`);
         continue;
     }
@@ -61,9 +85,15 @@ for (const packageName of packageNames) {
     $.verbose = true;
     cd(packagePath);
 
-    if (GH_RELEASE_REF === "refs/heads/beta") {
-        console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}" to "beta" tag`);
-        await $`npm publish --access public --tag beta`;
+    const distTag = standaloneDistTag !== ""
+        ? standaloneDistTag
+        : GH_RELEASE_REF === "refs/heads/beta"
+            ? "beta"
+            : null;
+
+    if (distTag != null) {
+        console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}" to "${distTag}" tag`);
+        await $`npm publish --access public --tag ${distTag}`;
     } else {
         console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}"`);
         await $`npm publish --access public`;

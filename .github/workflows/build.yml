@@ -15,10 +15,19 @@ on:
         description: "Build only macOS arm64 and publish the selected branch to npm"
         type: boolean
         default: false
+      cuda_ext_publish_test:
+        description: "Download Linux/Windows CUDA fallback assets from an existing GitHub release and publish only the ext packages to the cuda-ext-test dist-tag"
+        type: boolean
+        default: false
+      cuda_ext_source_release_tag:
+        description: "GitHub release tag to source the ext assets from, for example realtimex-v0.2.4"
+        type: string
+        default: ""
 
 
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.cuda_ext_publish_test != true
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +67,7 @@ jobs:
             llama/gitRelease.bundle
 
   build-binaries:
+    if: github.event_name != 'workflow_dispatch' || inputs.cuda_ext_publish_test != true
     name: Build binaries - ${{ matrix.config.name }}
     needs:
       - build
@@ -369,6 +379,56 @@ jobs:
         run: |
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
           npx semantic-release --dry-run
+
+  cuda-ext-publish-test:
+    name: CUDA ext publish test
+    if: github.event_name == 'workflow_dispatch' && inputs.cuda_ext_publish_test == true && inputs.cuda_ext_source_release_tag != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          lfs: true
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install modules
+        run: npm ci --ignore-scripts
+      - name: Download CUDA ext release assets
+        run: npx --no vite-node ./scripts/downloadPrebuiltBinariesGithubReleaseAssets.ts --releaseTag "${{ inputs.cuda_ext_source_release_tag }}"
+      - name: Inspect downloaded CUDA ext assets
+        run: |
+          echo "Prepared CUDA ext test bins:"
+          find bins -maxdepth 3 -type f | sort
+      - name: Move binaries to standalone prebuilt binary modules
+        run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts
+      - name: Prepare standalone CUDA ext packages
+        env:
+          STANDALONE_PACKAGES: "node-llama-cpp-linux-x64-cuda-ext,node-llama-cpp-win-x64-cuda-ext"
+        run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
+      - name: Inspect CUDA ext tarballs
+        run: |
+          for package in node-llama-cpp-linux-x64-cuda-ext node-llama-cpp-win-x64-cuda-ext; do
+            cd "./packages/@realtimex/$package"
+            echo "Packing @realtimex/$package"
+            npm pack --json
+            rm -f ./*.tgz
+            cd -
+          done
+      - name: Publish CUDA ext test packages
+        env:
+          GH_RELEASE_REF: ${{ github.ref }}
+          ALLOW_SKIPPED_PACKAGES: "true"
+          STANDALONE_PACKAGES: "node-llama-cpp-linux-x64-cuda-ext,node-llama-cpp-win-x64-cuda-ext"
+          STANDALONE_DIST_TAG: "cuda-ext-test"
+        run: npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion "0.0.0-cuda-ext-test.${{ github.run_number }}.${{ github.run_attempt }}"
 
   release:
     name: Release
