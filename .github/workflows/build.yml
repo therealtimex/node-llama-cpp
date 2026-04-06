@@ -32,6 +32,10 @@ on:
         type: string
         default: ""
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 
 jobs:
   build:

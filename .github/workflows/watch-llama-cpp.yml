@@ -1,7 +1,7 @@
 name: Watch llama.cpp
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7 */3 * * *"
   workflow_dispatch:
 
 permissions:
