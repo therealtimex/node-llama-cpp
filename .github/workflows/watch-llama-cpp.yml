@@ -26,19 +26,24 @@ jobs:
           node-version: "20"
       - name: Install modules
         run: npm ci --ignore-scripts
-      - name: Update tracked llama.cpp release
-        id: sync-release
-        run: npx --no vite-node ./scripts/syncLlamaCppRelease.ts --write --githubOutput
-      - name: Commit tracked release update
-        if: steps.sync-release.outputs.updated == 'true'
+      - name: Resolve current shipped llama.cpp release
+        id: currentRelease
+        run: |
+          current_release="$(git log --format=%s --grep='^feat: ship llama.cpp ' -n 1 | sed 's/^feat: ship llama.cpp //')"
+          echo "Current shipped llama.cpp release: ${current_release:-<none>}"
+          echo "currentRelease=$current_release" >> "$GITHUB_OUTPUT"
+      - name: Resolve latest llama.cpp release
+        id: syncRelease
+        run: npx --no vite-node ./scripts/syncLlamaCppRelease.ts --currentRelease "${{ steps.currentRelease.outputs.currentRelease }}" --githubOutput
+      - name: Commit latest llama.cpp release
+        if: steps.syncRelease.outputs.updated == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ./llama/binariesGithubRelease.json
-          git commit -m "feat: ship llama.cpp ${{ steps.sync-release.outputs.latestRelease }}"
+          git commit --allow-empty -m "feat: ship llama.cpp ${{ steps.syncRelease.outputs.latestRelease }}"
           git push origin HEAD:master
       - name: Trigger Build workflow
-        if: steps.sync-release.outputs.updated == 'true'
+        if: steps.syncRelease.outputs.updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -47,9 +52,9 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-            -d '{"ref":"master","inputs":{"full_release":"true"}}'
+            -d '{"ref":"master","inputs":{"full_release":"true","llama_cpp_release":"${{ steps.syncRelease.outputs.latestRelease }}"}}'
       - name: Trigger Test workflow
-        if: steps.sync-release.outputs.updated == 'true'
+        if: steps.syncRelease.outputs.updated == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -58,4 +63,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/test.yml/dispatches \
-            -d '{"ref":"master"}'
+            -d '{"ref":"master","inputs":{"llama_cpp_release":"${{ steps.syncRelease.outputs.latestRelease }}"}}'

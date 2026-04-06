@@ -1,5 +1,3 @@
-import path from "path";
-import fs from "fs-extra";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 
@@ -8,20 +6,14 @@ type GithubRelease = {
 };
 
 const defaultRepo = "ggml-org/llama.cpp";
-const defaultBinariesGithubReleaseFile = "./llama/binariesGithubRelease.json";
-
 const argv = await yargs(hideBin(process.argv))
     .option("repo", {
         type: "string",
         default: defaultRepo
     })
-    .option("file", {
+    .option("currentRelease", {
         type: "string",
-        default: defaultBinariesGithubReleaseFile
-    })
-    .option("write", {
-        type: "boolean",
-        default: false
+        default: ""
     })
     .option("githubOutput", {
         type: "boolean",
@@ -30,40 +22,19 @@ const argv = await yargs(hideBin(process.argv))
     .strict()
     .parse();
 
-const releaseFilePath = path.resolve(process.cwd(), argv.file);
-const trackedRelease = await getTrackedRelease(releaseFilePath);
+const currentRelease = argv.currentRelease.trim();
 const latestRelease = await getLatestGithubRelease(argv.repo);
-const updated = trackedRelease !== latestRelease;
+const updated = currentRelease !== latestRelease;
 
-console.info("Tracked llama.cpp release:", trackedRelease);
+console.info("Current shipped llama.cpp release:", currentRelease || "<none>");
 console.info("Latest llama.cpp release:", latestRelease);
-
-if (argv.write && updated) {
-    await fs.writeJson(releaseFilePath, {
-        release: latestRelease
-    }, {spaces: 4});
-
-    console.info("Updated tracked llama.cpp release file:", releaseFilePath);
-} else if (argv.write) {
-    console.info("Tracked llama.cpp release is already up to date");
-}
 
 if (argv.githubOutput)
     await writeGithubOutputs({
-        trackedRelease: trackedRelease,
+        currentRelease: currentRelease,
         latestRelease: latestRelease,
         updated: String(updated)
     });
-
-async function getTrackedRelease(releaseFilePath: string) {
-    const releaseJson = await fs.readJson(releaseFilePath) as {release?: string};
-    const trackedRelease = releaseJson.release?.trim();
-
-    if (trackedRelease == null || trackedRelease === "")
-        throw new Error(`Could not read tracked llama.cpp release from "${releaseFilePath}"`);
-
-    return trackedRelease;
-}
 
 async function getLatestGithubRelease(repo: string) {
     const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -90,6 +61,7 @@ async function writeGithubOutputs(outputs: Record<string, string>) {
     if (githubOutputPath == null || githubOutputPath === "")
         throw new Error("Expected GITHUB_OUTPUT to be set when --githubOutput is used");
 
+    const fs = await import("fs-extra");
     await fs.appendFile(
         githubOutputPath,
         Object.entries(outputs)

@@ -6,6 +6,11 @@ on:
       - beta
   pull_request:
   workflow_dispatch:
+    inputs:
+      llama_cpp_release:
+        description: "Exact llama.cpp release tag to test, for example b8681. Leave empty to use the most recent shipped tag or latest."
+        type: string
+        default: ""
 
 jobs:
   test:
@@ -39,12 +44,24 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Build
         run: npm run build
-      - name: Resolve tracked llama.cpp release
-        id: llamaRelease
-        run: echo "release=$(node -p 'require(\"./llama/binariesGithubRelease.json\").release')" >> "$GITHUB_OUTPUT"
-      - name: Download tracked llama.cpp release
+      - name: Resolve llama.cpp release
+        id: resolveLlamaCppRelease
+        run: |
+          resolved_release='${{ github.event_name == 'workflow_dispatch' && inputs.llama_cpp_release || '' }}'
+
+          if [ -z "$resolved_release" ]; then
+            resolved_release="$(git log --format=%s --grep='^feat: ship llama.cpp ' -n 1 | sed 's/^feat: ship llama.cpp //')"
+          fi
+
+          if [ -z "$resolved_release" ]; then
+            resolved_release="latest"
+          fi
+
+          echo "Resolved llama.cpp release: $resolved_release"
+          echo "release=$resolved_release" >> "$GITHUB_OUTPUT"
+      - name: Download resolved llama.cpp release
         env:
           CI: true
-        run: node ./dist/cli/cli.js source download --release "${{ steps.llamaRelease.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+        run: node ./dist/cli/cli.js source download --release "${{ steps.resolveLlamaCppRelease.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
       - name: Compile docs
         run: npm run docs:build
