@@ -50,8 +50,8 @@ if (argv.write && updated) {
 
 if (argv.githubOutput)
     await writeGithubOutputs({
-        tracked_release: trackedRelease,
-        latest_release: latestRelease,
+        trackedRelease: trackedRelease,
+        latestRelease: latestRelease,
         updated: String(updated)
     });
 

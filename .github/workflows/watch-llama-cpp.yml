@@ -35,7 +35,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ./llama/binariesGithubRelease.json
-          git commit -m "feat: ship llama.cpp ${{ steps.sync-release.outputs.latest_release }}"
+          git commit -m "feat: ship llama.cpp ${{ steps.sync-release.outputs.latestRelease }}"
           git push origin HEAD:master
       - name: Trigger Build workflow
         if: steps.sync-release.outputs.updated == 'true'

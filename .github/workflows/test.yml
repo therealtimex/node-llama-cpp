@@ -40,11 +40,11 @@ jobs:
       - name: Build
         run: npm run build
       - name: Resolve tracked llama.cpp release
-        id: llama-release
+        id: llamaRelease
         run: echo "release=$(node -p 'require(\"./llama/binariesGithubRelease.json\").release')" >> "$GITHUB_OUTPUT"
       - name: Download tracked llama.cpp release
         env:
           CI: true
-        run: node ./dist/cli/cli.js source download --release "${{ steps.llama-release.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+        run: node ./dist/cli/cli.js source download --release "${{ steps.llamaRelease.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
       - name: Compile docs
         run: npm run docs:build
