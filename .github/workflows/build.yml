@@ -11,6 +11,10 @@ on:
         description: "Build only macOS arm64 and run release dry-run checks"
         type: boolean
         default: false
+      full_release:
+        description: "Run the full matrix and publish the selected branch to npm"
+        type: boolean
+        default: false
       release_publish:
         description: "Build only macOS arm64 and publish the selected branch to npm"
         type: boolean
@@ -39,10 +43,13 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Build
         run: npm run build
-      - name: Download latest llama.cpp release
+      - name: Resolve tracked llama.cpp release
+        id: llama-release
+        run: echo "release=$(node -p 'require(\"./llama/binariesGithubRelease.json\").release')" >> "$GITHUB_OUTPUT"
+      - name: Download tracked llama.cpp release
         env:
           CI: true
-        run: node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+        run: node ./dist/cli/cli.js source download --release "${{ steps.llama-release.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -442,6 +449,7 @@ jobs:
     name: Release
     if: |
       (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.full_release == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')) ||
       (github.event_name == 'workflow_dispatch' && inputs.release_publish == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'))
     runs-on: ubuntu-latest
     concurrency: release-${{ github.ref }}

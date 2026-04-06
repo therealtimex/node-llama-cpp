@@ -1,0 +1,61 @@
+name: Watch llama.cpp
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: watch-llama-cpp-master
+  cancel-in-progress: false
+
+jobs:
+  sync-release:
+    name: Sync latest llama.cpp release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install modules
+        run: npm ci --ignore-scripts
+      - name: Update tracked llama.cpp release
+        id: sync-release
+        run: npx --no vite-node ./scripts/syncLlamaCppRelease.ts --write --githubOutput
+      - name: Commit tracked release update
+        if: steps.sync-release.outputs.updated == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ./llama/binariesGithubRelease.json
+          git commit -m "feat: ship llama.cpp ${{ steps.sync-release.outputs.latest_release }}"
+          git push origin HEAD:master
+      - name: Trigger Build workflow
+        if: steps.sync-release.outputs.updated == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -L --fail \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+            -d '{"ref":"master","inputs":{"full_release":"true"}}'
+      - name: Trigger Test workflow
+        if: steps.sync-release.outputs.updated == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -L --fail \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/test.yml/dispatches \
+            -d '{"ref":"master"}'
