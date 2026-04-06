@@ -517,7 +517,7 @@ jobs:
         run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
       - name: Chunk standalone CUDA ext packages
         if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
-        run: npx --no vite-node ./scripts/prepareStandaloneCudaExtChunkPackages.ts --packageVersion "$(node -p 'require(\"./package.json\").version')"
+        run: npx --no vite-node ./scripts/prepareStandaloneCudaExtChunkPackages.ts --packageVersion "$(node -p "require('./package.json').version")"
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
       - name: Release
