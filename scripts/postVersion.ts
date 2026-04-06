@@ -6,6 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJsonPath = path.join(__dirname, "..", "package.json");
 const packageLockPath = path.join(__dirname, "..", "package-lock.json");
 const standalonePackagesDirectory = path.join(__dirname, "..", "packages", "@realtimex");
+const repositoryUrl = "git+https://github.com/therealtimex/node-llama-cpp.git";
+const issuesUrl = "https://github.com/therealtimex/node-llama-cpp/issues";
 const skippedStandalonePackages = new Set([
     "@realtimex/node-llama-cpp-linux-x64-cuda-ext",
     "@realtimex/node-llama-cpp-win-x64-cuda-ext"
@@ -23,6 +25,11 @@ if (typeof currentVersion !== "string" || currentVersion.length === 0)
 packageJson.version = currentVersion;
 packageJson.publishConfig ??= {};
 packageJson.publishConfig.access = "public";
+packageJson.repository = {
+    type: "git",
+    url: repositoryUrl
+};
+packageJson.bugs = {url: issuesUrl};
 
 if (packageJson.optionalDependencies != null) {
     for (const packageName of Object.keys(packageJson.optionalDependencies)) {
@@ -98,6 +105,11 @@ if (await fs.pathExists(standalonePackagesDirectory)) {
         standalonePackageJson.version = currentVersion;
         standalonePackageJson.publishConfig ??= {};
         standalonePackageJson.publishConfig.access = "public";
+        standalonePackageJson.repository = {
+            type: "git",
+            url: repositoryUrl
+        };
+        standalonePackageJson.bugs = {url: issuesUrl};
         await fs.writeJson(standalonePackageJsonPath, standalonePackageJson, {spaces: 2});
 
         if (!(await fs.pathExists(standalonePackageLockPath)))

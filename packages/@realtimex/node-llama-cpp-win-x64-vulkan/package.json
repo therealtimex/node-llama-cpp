@@ -36,13 +36,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/withcatai/node-llama-cpp.git"
+    "url": "git+https://github.com/therealtimex/node-llama-cpp.git"
   },
   "author": "Gilad S.",
   "license": "MIT",
   "preferUnplugged": true,
   "bugs": {
-    "url": "https://github.com/withcatai/node-llama-cpp/issues"
+    "url": "https://github.com/therealtimex/node-llama-cpp/issues"
   },
   "homepage": "https://node-llama-cpp.withcat.ai",
   "devDependencies": {

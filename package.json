@@ -128,7 +128,7 @@
   "license": "MIT",
   "preferUnplugged": true,
   "bugs": {
-    "url": "https://github.com/withcatai/node-llama-cpp/issues"
+    "url": "https://github.com/therealtimex/node-llama-cpp/issues"
   },
   "funding": {
     "type": "github",
