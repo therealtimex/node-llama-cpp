@@ -37,7 +37,7 @@ for (const packageName of await fs.readdir(subPackagesDirectory)) {
 
     $.verbose = true;
     cd(packagePath);
-    await $`npm ci -f`;
+    await $`npm ci -f --ignore-scripts`;
     await $`npm run build`;
 
     delete packageJson.devDependencies;

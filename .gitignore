@@ -40,3 +40,5 @@ node_modules
 /llama/xpack/cmakeInstall.lock
 /bins
 /.release-assets
+/packages/@realtimex/node-llama-cpp-linux-x64-cuda-ext-chunk-*
+/packages/@realtimex/node-llama-cpp-win-x64-cuda-ext-chunk-*

@@ -5,6 +5,7 @@ import {hideBin} from "yargs/helpers";
 import fs from "fs-extra";
 import {$, cd} from "zx";
 import envVar from "env-var";
+import {standaloneCudaExtChunkManifestFileName} from "./utils/standaloneCudaExtChunking.js";
 
 const env = envVar.from(process.env);
 const GH_RELEASE_REF = env.get("GH_RELEASE_REF")
@@ -15,13 +16,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
 const packageScope = "@realtimex";
 const subPackagesDirectory = path.join(packageDirectory, packageScope);
-const skippedPackages = new Set([
-    "node-llama-cpp-linux-x64-cuda-ext",
-    "node-llama-cpp-win-x64-cuda-ext"
-]);
-const allowSkippedPackages = env.get("ALLOW_SKIPPED_PACKAGES")
-    .default("false")
-    .asBoolStrict();
 const selectedPackages = new Set(
     env.get("STANDALONE_PACKAGES")
         .default("")
@@ -48,26 +42,28 @@ if (packageVersion === "")
 
 const packageNames = (await fs.readdir(subPackagesDirectory))
     .sort((a, b) => {
-        if (a.endsWith("-ext"))
+        const aIsChunk = a.includes("-cuda-ext-chunk-");
+        const bIsChunk = b.includes("-cuda-ext-chunk-");
+
+        if (aIsChunk && !bIsChunk)
             return -1;
-        else if (b.endsWith("-ext"))
+        else if (!aIsChunk && bIsChunk)
             return 1;
+
+        const aIsExt = a.endsWith("-ext");
+        const bIsExt = b.endsWith("-ext");
+
+        if (aIsExt && !bIsExt)
+            return 1;
+        else if (!aIsExt && bIsExt)
+            return -1;
 
         return a.localeCompare(b);
     });
 
 for (const packageName of packageNames) {
-    if (
-        selectedPackages.size > 0 &&
-        !selectedPackages.has(packageName) &&
-        !selectedPackages.has(`${packageScope}/${packageName}`)
-    ) {
+    if (!matchesSelectedPackageName(packageName)) {
         console.info(`Skipping "${packageScope}/${packageName}" because it is not in STANDALONE_PACKAGES`);
-        continue;
-    }
-
-    if (!allowSkippedPackages && skippedPackages.has(packageName)) {
-        console.info(`Skipping "${packageScope}/${packageName}" because the tarball exceeds npm's publish size limit`);
         continue;
     }
 
@@ -79,6 +75,15 @@ for (const packageName of packageNames) {
 
     const packageJson = await fs.readJson(packagePackageJsonPath);
     packageJson.version = packageVersion;
+
+    const chunkManifestPath = path.join(packagePath, standaloneCudaExtChunkManifestFileName);
+    if (await fs.pathExists(chunkManifestPath)) {
+        const chunkManifest = await fs.readJson(chunkManifestPath);
+        packageJson.dependencies = Object.fromEntries(
+            (chunkManifest.chunks ?? []).map((chunk: {packageName: string}) => [chunk.packageName, packageVersion])
+        );
+    }
+
     await fs.writeJson(packagePackageJsonPath, packageJson, {spaces: 2});
     console.info(`Updated "${packageScope}/${packageName}/package.json" to version "${packageVersion}"`);
 
@@ -98,4 +103,23 @@ for (const packageName of packageNames) {
         console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}"`);
         await $`npm publish --access public`;
     }
+}
+
+function matchesSelectedPackageName(packageName: string) {
+    if (selectedPackages.size === 0)
+        return true;
+
+    if (selectedPackages.has(packageName) || selectedPackages.has(`${packageScope}/${packageName}`))
+        return true;
+
+    for (const selectedPackage of selectedPackages) {
+        const unscopedSelectedPackage = selectedPackage.replace(/^@realtimex\//, "");
+        if (
+            packageName.startsWith(unscopedSelectedPackage + "-chunk-") ||
+            `${packageScope}/${packageName}`.startsWith(selectedPackage + "-chunk-")
+        )
+            return true;
+    }
+
+    return false;
 }

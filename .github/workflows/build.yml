@@ -413,9 +413,17 @@ jobs:
         env:
           STANDALONE_PACKAGES: "node-llama-cpp-linux-x64-cuda-ext,node-llama-cpp-win-x64-cuda-ext"
         run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
+      - name: Chunk standalone CUDA ext packages
+        env:
+          STANDALONE_PACKAGES: "node-llama-cpp-linux-x64-cuda-ext,node-llama-cpp-win-x64-cuda-ext"
+        run: npx --no vite-node ./scripts/prepareStandaloneCudaExtChunkPackages.ts --packageVersion "0.0.0-cuda-ext-test.${{ github.run_number }}.${{ github.run_attempt }}"
       - name: Inspect CUDA ext tarballs
         run: |
-          for package in node-llama-cpp-linux-x64-cuda-ext node-llama-cpp-win-x64-cuda-ext; do
+          for package in \
+            node-llama-cpp-linux-x64-cuda-ext-chunk-01 \
+            node-llama-cpp-linux-x64-cuda-ext \
+            node-llama-cpp-win-x64-cuda-ext-chunk-01 \
+            node-llama-cpp-win-x64-cuda-ext; do
             cd "./packages/@realtimex/$package"
             echo "Packing @realtimex/$package"
             npm pack --json
@@ -507,6 +515,9 @@ jobs:
       - name: Prepare standalone prebuilt binary modules
         if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
+      - name: Chunk standalone CUDA ext packages
+        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
+        run: npx --no vite-node ./scripts/prepareStandaloneCudaExtChunkPackages.ts --packageVersion "$(node -p 'require(\"./package.json\").version')"
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
       - name: Release

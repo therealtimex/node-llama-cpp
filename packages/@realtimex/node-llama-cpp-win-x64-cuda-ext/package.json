@@ -6,7 +6,7 @@
   "type": "module",
   "files": [
     "dist/",
-    "bins/",
+    "chunk-manifest.json",
     "package.json",
     "README.md",
     "LICENSE"
@@ -30,6 +30,7 @@
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "build": "tsc --build tsconfig.json --force",
+    "postinstall": "node ./dist/index.js --assemble",
     "prewatch": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "watch": "tsc --build tsconfig.json --watch --force",
     "clean": "rm -rf ./node_modules ./dist ./tsconfig.tsbuildinfo"
