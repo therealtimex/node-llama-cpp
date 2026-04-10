@@ -1953,23 +1953,37 @@ export class LlamaContextSequence {
         if (this._checkpointOptions.maxMemory != null)
             this._checkpoints.prepareMemoryForIncomingCheckpoint(this._checkpointOptions.maxMemory);
 
-        const checkpoint = new this.model._llama._bindings.AddonContextSequenceCheckpoint();
-        await checkpoint.init(this._context._ctx, this._sequenceId);
-        if (this._nextTokenIndex - 1 !== checkpoint.maxPos)
-            this.model._llama._log(
-                LlamaLogLevel.warn,
-                `Checkpoint max position mismatch: expected ${this._nextTokenIndex - 1}, got ${checkpoint.maxPos}`
-            );
+        // Hold a disposal prevention handle for the entire duration of checkpoint.init().
+        // Without this, context.dispose() can start llama_free() concurrently with the
+        // checkpoint init worker accessing the Metal/GPU context → SIGSEGV race condition.
+        let preventDisposalHandle: DisposalPreventionHandle;
+        try {
+            preventDisposalHandle = this._context._backendContextDisposeGuard.createPreventDisposalHandle();
+        } catch {
+            return; // context is already being disposed — skip checkpoint
+        }
 
-        this._checkpoints.storeCheckpoint({
-            name,
-            maxNamedCheckpoints,
-            checkpoint,
-            currentMaxPos: checkpoint.maxPos
-        });
+        try {
+            const checkpoint = new this.model._llama._bindings.AddonContextSequenceCheckpoint();
+            await checkpoint.init(this._context._ctx, this._sequenceId);
+            if (this._nextTokenIndex - 1 !== checkpoint.maxPos)
+                this.model._llama._log(
+                    LlamaLogLevel.warn,
+                    `Checkpoint max position mismatch: expected ${this._nextTokenIndex - 1}, got ${checkpoint.maxPos}`
+                );
 
-        if (this._checkpointOptions.maxMemory != null)
-            this._checkpoints.pruneToKeepUnderMemoryUsage(this._checkpointOptions.maxMemory);
+            this._checkpoints.storeCheckpoint({
+                name,
+                maxNamedCheckpoints,
+                checkpoint,
+                currentMaxPos: checkpoint.maxPos
+            });
+
+            if (this._checkpointOptions.maxMemory != null)
+                this._checkpoints.pruneToKeepUnderMemoryUsage(this._checkpointOptions.maxMemory);
+        } finally {
+            preventDisposalHandle.dispose();
+        }
     }
 
     /** @internal */
