@@ -86,7 +86,7 @@ const config: GlobalConfig = {
             }
         }],
         ["@semantic-release/exec", {
-            prepareCmd: `${standalonePrebuiltPublishGuardShell}; npx --no vite-node ./scripts/postVersion.ts --version "${nextRelease.version}"`,
+            prepareCmd: `${standalonePrebuiltPublishGuardShell}; npx --no vite-node ./scripts/postVersion.ts --version "\${nextRelease.version}"`,
             publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
         }],
         "@semantic-release/npm",
