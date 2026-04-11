@@ -162,7 +162,7 @@ export async function ensureLlamaServerBinary(options: LlamaServerBinaryOptions 
 
     const defaults = getLlamaServerBuildDefaults(binaryOptions.env);
     throw new Error(
-        `Could not find a managed llama-server binary after building ` +
+        "Could not find a managed llama-server binary after building " +
         `${binaryOptions.repo ?? defaults.repo}@${binaryOptions.release ?? defaults.release}.`
     );
 }
