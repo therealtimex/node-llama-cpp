@@ -39,6 +39,11 @@ const githubPluginConfig: {
 } = {
     discussionCategoryName: "Releases" as string | boolean
 };
+const standalonePrebuiltPublishGuardShell =
+    "if [ \"$SKIP_STANDALONE_PREBUILT_PUBLISH\" = \"true\" ]; then " +
+    "echo \"Refusing release: standalone prebuilt binary modules must be published alongside the root package.\" >&2; " +
+    "exit 1; " +
+    "fi";
 
 if (fs.pathExistsSync(githubReleaseAssetsDirectory) && fs.readdirSync(githubReleaseAssetsDirectory).length > 0)
     githubPluginConfig.assets = [`${githubReleaseAssetsDirectory}/*`];
@@ -81,8 +86,8 @@ const config: GlobalConfig = {
             }
         }],
         ["@semantic-release/exec", {
-            prepareCmd: "npx --no vite-node ./scripts/postVersion.ts --version \"${nextRelease.version}\"",
-            publishCmd: "if [ \"$SKIP_STANDALONE_PREBUILT_PUBLISH\" = \"true\" ]; then echo \"Skipping standalone prebuilt binary module publish\"; else npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\"; fi"
+            prepareCmd: `${standalonePrebuiltPublishGuardShell}; npx --no vite-node ./scripts/postVersion.ts --version "${nextRelease.version}"`,
+            publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
         }],
         "@semantic-release/npm",
         ["@semantic-release/github", githubPluginConfig],

@@ -19,10 +19,6 @@ on:
         description: "Exact llama.cpp release tag to build, for example b8681. Leave empty to use the most recent shipped tag or latest."
         type: string
         default: ""
-      release_publish:
-        description: "Build only macOS arm64 and publish the selected branch to npm"
-        type: boolean
-        default: false
       cuda_ext_publish_test:
         description: "Download Linux/Windows CUDA fallback assets from an existing GitHub release and publish only the ext packages to the cuda-ext-test dist-tag"
         type: boolean
@@ -104,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && (inputs.release_dry_run == true || inputs.release_publish == true)) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
+        config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.release_dry_run == true) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -471,8 +467,7 @@ jobs:
     name: Release
     if: |
       (github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.full_release == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.release_publish == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'))
+      (github.event_name == 'workflow_dispatch' && inputs.full_release == true && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta'))
     runs-on: ubuntu-latest
     concurrency: release-${{ github.ref }}
     environment:
@@ -540,13 +535,10 @@ jobs:
       - name: Prepare GitHub release assets
         run: npx --no vite-node ./scripts/prepareGithubReleaseAssets.ts
       - name: Move binaries to standalone prebuilt binary modules
-        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts
       - name: Prepare standalone prebuilt binary modules
-        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
       - name: Chunk standalone CUDA ext packages
-        if: github.event_name != 'workflow_dispatch' || inputs.release_publish != true
         run: npx --no vite-node ./scripts/prepareStandaloneCudaExtChunkPackages.ts --packageVersion "$(node -p "require('./package.json').version")"
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
@@ -554,7 +546,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
-          SKIP_STANDALONE_PREBUILT_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.release_publish == true }}
           DEBUG: "semantic-release:*"
         run: |
           git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
