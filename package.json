@@ -7,12 +7,21 @@
   "types": "./dist/index.d.ts",
   "bin": {
     "node-llama-cpp": "dist/cli/cli.js",
-    "nlc": "dist/cli/cli.js"
+    "nlc": "dist/cli/cli.js",
+    "node-llama-server": "dist/cli/server.js"
   },
   "files": [
     "dist/",
     "templates/packed/",
-    "llama/",
+    "llama/CMakeLists.txt",
+    "llama/addon/",
+    "llama/binariesGithubRelease.json",
+    "llama/cmake/",
+    "llama/gpuInfo/",
+    "llama/package.json",
+    "llama/profiles/",
+    "llama/toolchains/",
+    "llama/xpack/package.json",
     "bins/",
     "package.json",
     "README.md",
