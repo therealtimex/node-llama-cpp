@@ -44,7 +44,7 @@ const llamaServerRuntimeGithubReleaseAssets: readonly LlamaServerRuntimeGithubRe
     },
     {
         platform: "linux",
-        arch: "armv7l",
+        arch: "arm",
         gpu: false,
         runtimePlatform: "linux",
         runtimeArch: "armv7l"

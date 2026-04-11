@@ -32,6 +32,21 @@ describe("llamaServerGithubReleaseAssets", () => {
             .toBeNull();
     });
 
+    test("maps 32-bit ARM runtime lookups to the armv7l asset filename", () => {
+        expect(getLlamaServerGithubReleaseAssetForBuildOptions({
+            platform: "linux",
+            arch: "arm",
+            gpu: false
+        }))
+            .toEqual({
+                platform: "linux",
+                arch: "arm",
+                gpu: false,
+                runtimePlatform: "linux",
+                runtimeArch: "armv7l"
+            });
+    });
+
     test("builds the canonical runtime asset file name", () => {
         expect(getLlamaServerGithubReleaseAssetFileName("b8762", {
             platform: "mac",

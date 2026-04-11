@@ -13,6 +13,31 @@ const releaseAssetsDirectory = path.join(__dirname, "..", ".release-assets");
 
 await fs.emptyDir(releaseAssetsDirectory);
 
+function createZipArchive(sourceDirectory: string, targetPath: string) {
+    if (process.platform === "win32") {
+        execFileSync(
+            "powershell.exe",
+            [
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Compress-Archive -Path (Join-Path $PWD '*') -DestinationPath $args[0] -Force",
+                targetPath
+            ],
+            {
+                cwd: sourceDirectory,
+                stdio: "ignore"
+            }
+        );
+        return;
+    }
+
+    execFileSync("zip", ["-r", targetPath, "."], {
+        cwd: sourceDirectory,
+        stdio: "ignore"
+    });
+}
+
 for (const asset of getPrebuiltBinariesGithubReleaseAssets()) {
     const sourcePath = path.join(binsDirectory, asset.folderName, "fallback", asset.fallbackBinaryName);
     const targetPath = path.join(releaseAssetsDirectory, asset.assetFileName);
@@ -52,9 +77,6 @@ for (const folderName of await fs.readdir(binsDirectory)) {
         continue;
     }
 
-    execFileSync("zip", ["-r", targetPath, "."], {
-        cwd: folderPath,
-        stdio: "ignore"
-    });
+    createZipArchive(folderPath, targetPath);
     console.info(`Prepared release asset "${assetFileName}"`);
 }
