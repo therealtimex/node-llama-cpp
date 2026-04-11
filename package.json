@@ -7,7 +7,8 @@
   "types": "./dist/index.d.ts",
   "bin": {
     "node-llama-cpp": "dist/cli/cli.js",
-    "nlc": "dist/cli/cli.js"
+    "nlc": "dist/cli/cli.js",
+    "node-llama-server": "dist/cli/server.js"
   },
   "files": [
     "dist/",
