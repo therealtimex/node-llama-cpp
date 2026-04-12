@@ -69,6 +69,19 @@ describe("llamaServerGithubReleaseAssets", () => {
             .toBe("llama-server-win32-x64-b8762.zip");
     });
 
+    test("builds the armv7l runtime asset file name from build metadata", () => {
+        expect(getLlamaServerGithubReleaseAssetFileNameForBuildMetadata({
+            platform: "linux",
+            arch: "armv7l",
+            gpu: false,
+            llamaCpp: {
+                repo: "ggml-org/llama.cpp",
+                release: "b8762"
+            }
+        }))
+            .toBe("llama-server-linux-armv7l-b8762.zip");
+    });
+
     test("builds the GitHub release asset download URL", () => {
         expect(getLlamaServerGithubReleaseTag("0.2.1"))
             .toBe("realtimex-v0.2.1");
