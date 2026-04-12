@@ -76,7 +76,14 @@ export function getLlamaServerGithubReleaseAssetForBuildOptions(buildOptions: {
 }) {
     return llamaServerRuntimeGithubReleaseAssets.find((asset) => (
         asset.platform === buildOptions.platform &&
-        asset.arch === buildOptions.arch &&
+        (
+            asset.arch === buildOptions.arch ||
+            (
+                asset.platform === "linux" &&
+                asset.arch === "arm" &&
+                buildOptions.arch === "armv7l"
+            )
+        ) &&
         asset.gpu === buildOptions.gpu
     )) ?? null;
 }

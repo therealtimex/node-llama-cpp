@@ -5,11 +5,24 @@ import fs from "fs-extra";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
 const binsDirectory = path.join(__dirname, "..", "bins");
+const llamaServerBinaryNames = new Set(["llama-server", "llama-server.exe"]);
+
+async function isLlamaServerRuntimeFolder(folderName: string) {
+    const folderPath = path.join(binsDirectory, folderName);
+    const entries = await fs.readdir(folderPath);
+
+    return entries.some((entry) => llamaServerBinaryNames.has(entry));
+}
 
 async function moveBinariesFolderToStandaloneModule(folderNameFilter: (folderName: string) => boolean, packageName: string) {
     for (const folderName of await fs.readdir(binsDirectory)) {
         if (!folderNameFilter(folderName))
             continue;
+
+        if (await isLlamaServerRuntimeFolder(folderName)) {
+            console.info(`Skipping "${folderName}" because it is a llama-server runtime build`);
+            continue;
+        }
 
         const packagePath = path.join(packageDirectory, packageName);
         const packageBinsPath = path.join(packagePath, "bins");
@@ -31,6 +44,11 @@ async function moveBinariesFallbackDirToStandaloneExtModule(folderNameFilter: (f
     for (const folderName of await fs.readdir(binsDirectory)) {
         if (!folderNameFilter(folderName))
             continue;
+
+        if (await isLlamaServerRuntimeFolder(folderName)) {
+            console.info(`Skipping "${folderName}" because it is a llama-server runtime build`);
+            continue;
+        }
 
         const packagePath = path.join(packageDirectory, packageName);
         const packageBinsPath = path.join(packagePath, "bins");
