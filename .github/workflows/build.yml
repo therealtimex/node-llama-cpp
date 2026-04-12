@@ -272,7 +272,41 @@ jobs:
           async function buildBinary(arch, flags = [], nodeTarget = nodeVersion) {
             console.log(`Building ${arch} for node ${nodeTarget} with flags`, flags);
 
-            await $`node ./dist/cli/cli.js source build --ciMode --noUsageExample --arch ${arch} --nodeTarget ${nodeVersion} ${flags}`;
+            await $`node ./dist/cli/cli.js source build --ciMode --noUsageExample --arch ${arch} --nodeTarget ${nodeTarget} ${flags}`;
+          }
+
+          const serverBuildCmakeOptions = {
+            LLAMA_BUILD_COMMON: "ON",
+            LLAMA_BUILD_EXAMPLES: "ON",
+            LLAMA_BUILD_SERVER: "ON",
+            LLAMA_BUILD_TESTS: "OFF",
+            LLAMA_BUILD_TOOLS: "ON",
+            LLAMA_CURL: "OFF",
+            LLAMA_HTTPLIB: "ON",
+            LLAMA_OPENSSL: "OFF",
+            LLAMA_BUILD_BORINGSSL: "OFF"
+          };
+
+          async function buildLlamaServerRuntimeBinary(arch, gpu, nodeTarget = nodeVersion) {
+            console.log(`Building managed llama-server runtime ${arch} for node ${nodeTarget} with gpu`, gpu);
+
+            const previousEnvValues = new Map();
+            for (const [optionName, optionValue] of Object.entries(serverBuildCmakeOptions)) {
+              const envName = `NODE_LLAMA_CPP_CMAKE_OPTION_${optionName}`;
+              previousEnvValues.set(envName, process.env[envName]);
+              process.env[envName] = optionValue;
+            }
+
+            try {
+              await buildBinary(arch, ["--gpu", gpu === false ? "false" : gpu], nodeTarget);
+            } finally {
+              for (const [envName, previousValue] of previousEnvValues) {
+                if (previousValue == null)
+                  delete process.env[envName];
+                else
+                  process.env[envName] = previousValue;
+              }
+            }
           }
 
           // build binaries
@@ -280,21 +314,33 @@ jobs:
             await buildBinary("x64", ["--gpu", "false"]);
             await buildBinary("x64", ["--gpu", "cuda"]);
             await buildBinary("x64", ["--gpu", "vulkan"]);
+
+            await buildLlamaServerRuntimeBinary("x64", false);
           } else if (process.env.ARTIFACT_NAME === "win-2") {
             await buildBinary("arm64", ["--gpu", "false"], windowsOnArmNodeVersion);
             await buildBinary("x64", ["--gpu", "cuda"]);
+
+            await buildLlamaServerRuntimeBinary("arm64", false, windowsOnArmNodeVersion);
           } else if (process.env.ARTIFACT_NAME === "linux-1") {
             await buildBinary("x64", ["--gpu", "false"]);
             await buildBinary("x64", ["--gpu", "cuda"]);
             await buildBinary("x64", ["--gpu", "vulkan"]);
             await buildBinary("arm64", ["--gpu", "false"]);
             await buildBinary("armv7l", ["--gpu", "false"]);
+
+            await buildLlamaServerRuntimeBinary("x64", false);
+            await buildLlamaServerRuntimeBinary("arm64", false);
+            await buildLlamaServerRuntimeBinary("armv7l", false);
           } else if (process.env.ARTIFACT_NAME === "linux-2") {
             await buildBinary("x64", ["--gpu", "cuda"]);
           } else if (process.env.ARTIFACT_NAME === "mac-x64") {
             await buildBinary("x64", ["--gpu", "false"]);
+
+            await buildLlamaServerRuntimeBinary("x64", false);
           } else if (process.env.ARTIFACT_NAME === "mac-arm64") {
             await buildBinary("arm64", ["--gpu", "metal"]);
+
+            await buildLlamaServerRuntimeBinary("arm64", "metal");
           }
 
           // move binaries to bins
