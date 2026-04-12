@@ -9,6 +9,7 @@ import {type BuildMetadataFile} from "../src/bindings/types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const binsDirectory = path.join(__dirname, "..", "bins");
+const llamaServerRuntimeBinsDirectory = path.join(__dirname, "..", "llama-server-runtime-bins");
 const releaseAssetsDirectory = path.join(__dirname, "..", ".release-assets");
 
 await fs.emptyDir(releaseAssetsDirectory);
@@ -51,32 +52,37 @@ for (const asset of getPrebuiltBinariesGithubReleaseAssets()) {
     console.info(`Prepared release asset "${asset.assetFileName}"`);
 }
 
-for (const folderName of await fs.readdir(binsDirectory)) {
-    const folderPath = path.join(binsDirectory, folderName);
-    if (!(await fs.pathExists(folderPath)) || !(await fs.stat(folderPath)).isDirectory())
+for (const runtimeBinsDirectory of [llamaServerRuntimeBinsDirectory, binsDirectory]) {
+    if (!(await fs.pathExists(runtimeBinsDirectory)))
         continue;
 
-    const buildMetadataPath = path.join(folderPath, buildMetadataFileName);
-    if (!(await fs.pathExists(buildMetadataPath)))
-        continue;
+    for (const folderName of await fs.readdir(runtimeBinsDirectory)) {
+        const folderPath = path.join(runtimeBinsDirectory, folderName);
+        if (!(await fs.pathExists(folderPath)) || !(await fs.stat(folderPath)).isDirectory())
+            continue;
 
-    const buildMetadata = await fs.readJson(buildMetadataPath) as BuildMetadataFile;
-    const assetFileName = getLlamaServerGithubReleaseAssetFileNameForBuildMetadata(buildMetadata.buildOptions);
-    if (assetFileName == null)
-        continue;
+        const buildMetadataPath = path.join(folderPath, buildMetadataFileName);
+        if (!(await fs.pathExists(buildMetadataPath)))
+            continue;
 
-    const targetPath = path.join(releaseAssetsDirectory, assetFileName);
-    await fs.remove(targetPath);
+        const buildMetadata = await fs.readJson(buildMetadataPath) as BuildMetadataFile;
+        const assetFileName = getLlamaServerGithubReleaseAssetFileNameForBuildMetadata(buildMetadata.buildOptions);
+        if (assetFileName == null)
+            continue;
 
-    const hasLlamaServer = (await fs.readdir(folderPath)).some((fileName) => (
-        fileName === "llama-server" ||
-        fileName === "llama-server.exe"
-    ));
-    if (!hasLlamaServer) {
-        console.info(`Skipping release asset "${assetFileName}" because "${folderPath}" does not contain llama-server`);
-        continue;
+        const targetPath = path.join(releaseAssetsDirectory, assetFileName);
+        await fs.remove(targetPath);
+
+        const hasLlamaServer = (await fs.readdir(folderPath)).some((fileName) => (
+            fileName === "llama-server" ||
+            fileName === "llama-server.exe"
+        ));
+        if (!hasLlamaServer) {
+            console.info(`Skipping release asset "${assetFileName}" because "${folderPath}" does not contain llama-server`);
+            continue;
+        }
+
+        createZipArchive(folderPath, targetPath);
+        console.info(`Prepared release asset "${assetFileName}"`);
     }
-
-    createZipArchive(folderPath, targetPath);
-    console.info(`Prepared release asset "${assetFileName}"`);
 }

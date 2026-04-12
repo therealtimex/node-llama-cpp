@@ -378,12 +378,32 @@ jobs:
 
           EOF
 
+      - name: Split llama-server runtime artifact
+        shell: bash
+        run: |
+          mkdir -p llama-server-runtime-bins
+
+          find ./bins -mindepth 1 -maxdepth 1 -type d | while read dir; do
+            if [ -f "$dir/llama-server" ] || [ -f "$dir/llama-server.exe" ]; then
+              mv "$dir" ./llama-server-runtime-bins/
+            fi
+          done
+
+          echo "Llama server runtime binaries:"
+          ls ./llama-server-runtime-bins || true
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
           name: "bins-${{ matrix.config.artifact }}"
           path: "bins/*"
+      - name: Publish llama-server runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          if-no-files-found: ignore
+          name: "llama-server-runtime-${{ matrix.config.artifact }}"
+          path: "llama-server-runtime-bins/*"
 
   release-dry-run:
     name: Release dry run
@@ -416,7 +436,12 @@ jobs:
       - name: Move smoke artifacts
         run: |
           mkdir -p bins
+          mkdir -p llama-server-runtime-bins
           mv artifacts/bins-*/* bins/
+          for dir in artifacts/llama-server-runtime-*; do
+            [ -d "$dir" ] || continue
+            mv "$dir"/* llama-server-runtime-bins/
+          done
           mv artifacts/build dist/
 
           cp -r artifacts/llama.cpp/llama.cpp/grammars llama/grammars
@@ -436,6 +461,8 @@ jobs:
 
           echo "Built smoke binaries:"
           ls bins
+          echo "Built smoke llama-server runtimes:"
+          ls llama-server-runtime-bins || true
       - name: Add "postinstall" script to package.json
         run: npm run addPostinstallScript
       - name: Prepare GitHub release assets
@@ -546,7 +573,12 @@ jobs:
       - name: Move artifacts
         run: |
           mkdir -p bins
+          mkdir -p llama-server-runtime-bins
           mv artifacts/bins-*/* bins/
+          for dir in artifacts/llama-server-runtime-*; do
+            [ -d "$dir" ] || continue
+            mv "$dir"/* llama-server-runtime-bins/
+          done
           mv artifacts/build dist/
 
           if [ -d ./bins/win-x64-cuda-2 ]; then
@@ -578,6 +610,8 @@ jobs:
 
           echo "Built binaries:"
           ls bins
+          echo "Built llama-server runtimes:"
+          ls llama-server-runtime-bins || true
       - name: Prepare GitHub release assets
         run: npx --no vite-node ./scripts/prepareGithubReleaseAssets.ts
       - name: Move binaries to standalone prebuilt binary modules
