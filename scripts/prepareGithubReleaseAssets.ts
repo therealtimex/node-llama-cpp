@@ -70,9 +70,6 @@ for (const runtimeBinsDirectory of [llamaServerRuntimeBinsDirectory, binsDirecto
         if (assetFileName == null)
             continue;
 
-        const targetPath = path.join(releaseAssetsDirectory, assetFileName);
-        await fs.remove(targetPath);
-
         const hasLlamaServer = (await fs.readdir(folderPath)).some((fileName) => (
             fileName === "llama-server" ||
             fileName === "llama-server.exe"
@@ -82,6 +79,8 @@ for (const runtimeBinsDirectory of [llamaServerRuntimeBinsDirectory, binsDirecto
             continue;
         }
 
+        const targetPath = path.join(releaseAssetsDirectory, assetFileName);
+        await fs.remove(targetPath);
         createZipArchive(folderPath, targetPath);
         console.info(`Prepared release asset "${assetFileName}"`);
     }
