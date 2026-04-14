@@ -637,3 +637,23 @@ jobs:
           if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
             echo "npm-url=https://www.npmjs.com/package/@realtimex/node-llama-cpp/v/$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Publish node-llama-latest-release.json to realtimex resources
+        if: hashFiles('.semanticRelease.npmPackage.deployedVersion.txt') != ''
+        env:
+          GH_TOKEN: ${{ secrets.REALTIMEX_RELEASES_TOKEN }}
+        run: |
+          version=$(cat .semanticRelease.npmPackage.deployedVersion.txt)
+          tag="realtimex-v${version}"
+
+          # Fetch llama-server assets from the newly published release
+          assets_json=$(gh release view "$tag" \
+            --repo therealtimex/node-llama-cpp \
+            --json assets \
+            --jq '.assets | map(select(.name | startswith("llama-server-"))) | map({name: .name, size: .size, browser_download_url: .url, created_at: .createdAt, updated_at: .updatedAt})')
+
+          printf '{"tag":"%s","assets":%s}\n' "$tag" "$assets_json" > node-llama-latest-release.json
+
+          gh release upload resources node-llama-latest-release.json \
+            --repo therealtimex/realtimex \
+            --clobber
