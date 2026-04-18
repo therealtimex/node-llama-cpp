@@ -10,7 +10,8 @@ export type LlamaServerRuntimeGithubReleaseAsset = {
     arch: string,
     gpu: BuildGpu,
     runtimePlatform: NodeJS.Platform,
-    runtimeArch: string
+    runtimeArch: string,
+    runtimeFlavor?: "cuda" | "vulkan"
 };
 
 const llamaServerRuntimeGithubReleaseAssets: readonly LlamaServerRuntimeGithubReleaseAsset[] = Object.freeze([
@@ -37,10 +38,34 @@ const llamaServerRuntimeGithubReleaseAssets: readonly LlamaServerRuntimeGithubRe
     },
     {
         platform: "linux",
+        arch: "x64",
+        gpu: "cuda",
+        runtimePlatform: "linux",
+        runtimeArch: "x64",
+        runtimeFlavor: "cuda"
+    },
+    {
+        platform: "linux",
+        arch: "x64",
+        gpu: "vulkan",
+        runtimePlatform: "linux",
+        runtimeArch: "x64",
+        runtimeFlavor: "vulkan"
+    },
+    {
+        platform: "linux",
         arch: "arm64",
         gpu: false,
         runtimePlatform: "linux",
         runtimeArch: "arm64"
+    },
+    {
+        platform: "linux",
+        arch: "arm64",
+        gpu: "cuda",
+        runtimePlatform: "linux",
+        runtimeArch: "arm64",
+        runtimeFlavor: "cuda"
     },
     {
         platform: "linux",
@@ -55,6 +80,22 @@ const llamaServerRuntimeGithubReleaseAssets: readonly LlamaServerRuntimeGithubRe
         gpu: false,
         runtimePlatform: "win32",
         runtimeArch: "x64"
+    },
+    {
+        platform: "win",
+        arch: "x64",
+        gpu: "cuda",
+        runtimePlatform: "win32",
+        runtimeArch: "x64",
+        runtimeFlavor: "cuda"
+    },
+    {
+        platform: "win",
+        arch: "x64",
+        gpu: "vulkan",
+        runtimePlatform: "win32",
+        runtimeArch: "x64",
+        runtimeFlavor: "vulkan"
     },
     {
         platform: "win",
@@ -100,7 +141,13 @@ export function getLlamaServerGithubReleaseAssetFileName(
     if (asset == null)
         return null;
 
-    return `llama-server-${asset.runtimePlatform}-${asset.runtimeArch}-${release}.zip`;
+    return [
+        "llama-server",
+        asset.runtimePlatform,
+        asset.runtimeArch,
+        asset.runtimeFlavor,
+        release
+    ].filter((part) => part != null && part !== "").join("-") + ".zip";
 }
 
 export function getLlamaServerGithubReleaseAssetFileNameForBuildMetadata(

@@ -149,7 +149,7 @@ jobs:
         if: matrix.config.name == 'Ubuntu (2)'
         run: |
           sudo apt-get update
-          sudo apt-get install ninja-build libtbb-dev
+          sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu
 
           wget -c https://github.com/Kitware/CMake/releases/download/v4.2.1/cmake-4.2.1-linux-x86_64.tar.gz
           sudo tar --strip-components=1 -C /usr/local -xzf cmake-4.2.1-linux-x86_64.tar.gz
@@ -187,6 +187,12 @@ jobs:
         with:
           cuda: '12.4.0'
           method: 'network'
+
+      - name: Install Cuda 12.4 ARM64 cross target on Ubuntu (2)
+        if: matrix.config.name == 'Ubuntu (2)'
+        run: |
+          sudo apt-get update
+          sudo apt-get install cuda-cross-aarch64-12-4
 
       - name: Install Vulkan SDK on Windows (1)
         if: matrix.config.name == 'Windows (1)'
@@ -316,6 +322,8 @@ jobs:
             await buildBinary("x64", ["--gpu", "vulkan"]);
 
             await buildLlamaServerRuntimeBinary("x64", false);
+            await buildLlamaServerRuntimeBinary("x64", "cuda");
+            await buildLlamaServerRuntimeBinary("x64", "vulkan");
           } else if (process.env.ARTIFACT_NAME === "win-2") {
             await buildBinary("arm64", ["--gpu", "false"], windowsOnArmNodeVersion);
             await buildBinary("x64", ["--gpu", "cuda"]);
@@ -329,10 +337,13 @@ jobs:
             await buildBinary("armv7l", ["--gpu", "false"]);
 
             await buildLlamaServerRuntimeBinary("x64", false);
+            await buildLlamaServerRuntimeBinary("x64", "vulkan");
             await buildLlamaServerRuntimeBinary("arm64", false);
             await buildLlamaServerRuntimeBinary("armv7l", false);
           } else if (process.env.ARTIFACT_NAME === "linux-2") {
             await buildBinary("x64", ["--gpu", "cuda"]);
+            await buildLlamaServerRuntimeBinary("x64", "cuda");
+            await buildLlamaServerRuntimeBinary("arm64", "cuda");
           } else if (process.env.ARTIFACT_NAME === "mac-x64") {
             await buildBinary("x64", ["--gpu", "false"]);
 
@@ -353,6 +364,22 @@ jobs:
             );
           }
 
+          async function findLlamaServerRuntimeDir({arch, gpu}) {
+            for (const folderName of await fs.readdir(llamaBinsDirectoryPath)) {
+              const folderPath = path.join(llamaBinsDirectoryPath, folderName);
+              const metadataPath = path.join(folderPath, "_nlcBuildMetadata.json");
+
+              if (!(await fs.pathExists(path.join(folderPath, "llama-server"))) || !(await fs.pathExists(metadataPath)))
+                continue;
+
+              const metadata = await fs.readJson(metadataPath);
+              if (metadata?.buildOptions?.platform === "linux" && metadata?.buildOptions?.arch === arch && metadata?.buildOptions?.gpu === gpu)
+                return folderPath;
+            }
+
+            return null;
+          }
+
           if (process.env.ARTIFACT_NAME === "win-2") {
             await fs.move(
               path.join(llamaBinsDirectoryPath, "win-x64-cuda"),
@@ -370,6 +397,28 @@ jobs:
 
             if (!(await fs.pathExists(path.join(llamaBinsDirectoryPath, "linux-x64-cuda-2", "libggml-cuda.so")))) {
               throw new Error("libggml-cuda.so not found in linux-x64-cuda-2");
+            }
+
+            const linuxX64CudaServerRuntimeDir = await findLlamaServerRuntimeDir({
+              arch: "x64",
+              gpu: "cuda"
+            });
+            if (linuxX64CudaServerRuntimeDir == null) {
+              throw new Error("linux x64 CUDA llama-server runtime not found");
+            }
+            if (!(await fs.pathExists(path.join(linuxX64CudaServerRuntimeDir, "libggml-cuda.so")))) {
+              throw new Error(`libggml-cuda.so not found in ${linuxX64CudaServerRuntimeDir}`);
+            }
+
+            const linuxArm64CudaServerRuntimeDir = await findLlamaServerRuntimeDir({
+              arch: "arm64",
+              gpu: "cuda"
+            });
+            if (linuxArm64CudaServerRuntimeDir == null) {
+              throw new Error("linux arm64 CUDA llama-server runtime not found");
+            }
+            if (!(await fs.pathExists(path.join(linuxArm64CudaServerRuntimeDir, "libggml-cuda.so")))) {
+              throw new Error(`libggml-cuda.so not found in ${linuxArm64CudaServerRuntimeDir}`);
             }
           }
 
@@ -613,6 +662,8 @@ jobs:
           echo "Built llama-server runtimes:"
           ls llama-server-runtime-bins || true
       - name: Prepare GitHub release assets
+        env:
+          REQUIRE_ALL_LLAMA_SERVER_RELEASE_ASSETS: "true"
         run: npx --no vite-node ./scripts/prepareGithubReleaseAssets.ts
       - name: Move binaries to standalone prebuilt binary modules
         run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts

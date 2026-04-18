@@ -4,10 +4,106 @@ import {
     getLlamaServerGithubReleaseAssetFileName,
     getLlamaServerGithubReleaseAssetFileNameForBuildMetadata,
     getLlamaServerGithubReleaseAssetForBuildOptions,
+    getLlamaServerGithubReleaseAssets,
     getLlamaServerGithubReleaseTag
 } from "../../src/bindings/utils/llamaServerGithubReleaseAssets.js";
 
 describe("llamaServerGithubReleaseAssets", () => {
+    test("declares the managed runtime flavor matrix", () => {
+        expect(getLlamaServerGithubReleaseAssets())
+            .toEqual([
+                {
+                    platform: "mac",
+                    arch: "arm64",
+                    gpu: "metal",
+                    runtimePlatform: "darwin",
+                    runtimeArch: "arm64"
+                },
+                {
+                    platform: "mac",
+                    arch: "x64",
+                    gpu: false,
+                    runtimePlatform: "darwin",
+                    runtimeArch: "x64"
+                },
+                {
+                    platform: "linux",
+                    arch: "x64",
+                    gpu: false,
+                    runtimePlatform: "linux",
+                    runtimeArch: "x64"
+                },
+                {
+                    platform: "linux",
+                    arch: "x64",
+                    gpu: "cuda",
+                    runtimePlatform: "linux",
+                    runtimeArch: "x64",
+                    runtimeFlavor: "cuda"
+                },
+                {
+                    platform: "linux",
+                    arch: "x64",
+                    gpu: "vulkan",
+                    runtimePlatform: "linux",
+                    runtimeArch: "x64",
+                    runtimeFlavor: "vulkan"
+                },
+                {
+                    platform: "linux",
+                    arch: "arm64",
+                    gpu: false,
+                    runtimePlatform: "linux",
+                    runtimeArch: "arm64"
+                },
+                {
+                    platform: "linux",
+                    arch: "arm64",
+                    gpu: "cuda",
+                    runtimePlatform: "linux",
+                    runtimeArch: "arm64",
+                    runtimeFlavor: "cuda"
+                },
+                {
+                    platform: "linux",
+                    arch: "arm",
+                    gpu: false,
+                    runtimePlatform: "linux",
+                    runtimeArch: "armv7l"
+                },
+                {
+                    platform: "win",
+                    arch: "x64",
+                    gpu: false,
+                    runtimePlatform: "win32",
+                    runtimeArch: "x64"
+                },
+                {
+                    platform: "win",
+                    arch: "x64",
+                    gpu: "cuda",
+                    runtimePlatform: "win32",
+                    runtimeArch: "x64",
+                    runtimeFlavor: "cuda"
+                },
+                {
+                    platform: "win",
+                    arch: "x64",
+                    gpu: "vulkan",
+                    runtimePlatform: "win32",
+                    runtimeArch: "x64",
+                    runtimeFlavor: "vulkan"
+                },
+                {
+                    platform: "win",
+                    arch: "arm64",
+                    gpu: false,
+                    runtimePlatform: "win32",
+                    runtimeArch: "arm64"
+                }
+            ]);
+    });
+
     test("resolves the macOS arm64 metal runtime asset", () => {
         expect(getLlamaServerGithubReleaseAssetForBuildOptions({
             platform: "mac",
@@ -23,13 +119,43 @@ describe("llamaServerGithubReleaseAssets", () => {
             });
     });
 
-    test("does not resolve non-primary GPU variants", () => {
+    test.each([
+        [{platform: "mac", arch: "x64", gpu: "metal"}],
+        [{platform: "win", arch: "arm64", gpu: "cuda"}]
+    ] as const)("does not resolve non-primary managed server flavor %#", (buildOptions) => {
+        expect(getLlamaServerGithubReleaseAssetForBuildOptions(buildOptions))
+            .toBeNull();
+    });
+
+    test("resolves the Linux arm64 CUDA runtime asset for DGX Spark", () => {
         expect(getLlamaServerGithubReleaseAssetForBuildOptions({
             platform: "linux",
-            arch: "x64",
+            arch: "arm64",
             gpu: "cuda"
         }))
-            .toBeNull();
+            .toEqual({
+                platform: "linux",
+                arch: "arm64",
+                gpu: "cuda",
+                runtimePlatform: "linux",
+                runtimeArch: "arm64",
+                runtimeFlavor: "cuda"
+            });
+    });
+
+    test("resolves the Linux arm64 CPU fallback runtime asset", () => {
+        expect(getLlamaServerGithubReleaseAssetForBuildOptions({
+            platform: "linux",
+            arch: "arm64",
+            gpu: false
+        }))
+            .toEqual({
+                platform: "linux",
+                arch: "arm64",
+                gpu: false,
+                runtimePlatform: "linux",
+                runtimeArch: "arm64"
+            });
     });
 
     test("maps 32-bit ARM runtime lookups to the armv7l asset filename", () => {
@@ -54,6 +180,40 @@ describe("llamaServerGithubReleaseAssets", () => {
             gpu: "metal"
         }))
             .toBe("llama-server-darwin-arm64-b8762.zip");
+    });
+
+    test("builds the DGX-compatible Linux arm64 CUDA runtime asset file name", () => {
+        expect(getLlamaServerGithubReleaseAssetFileName("b8762", {
+            platform: "linux",
+            arch: "arm64",
+            gpu: "cuda"
+        }))
+            .toBe("llama-server-linux-arm64-cuda-b8762.zip");
+    });
+
+    test("builds canonical runtime asset file names for every managed flavor", () => {
+        const fileNames = getLlamaServerGithubReleaseAssets()
+            .map((asset) => getLlamaServerGithubReleaseAssetFileName("b8762", {
+                platform: asset.platform,
+                arch: asset.arch,
+                gpu: asset.gpu
+            }));
+
+        expect(fileNames)
+            .toEqual([
+                "llama-server-darwin-arm64-b8762.zip",
+                "llama-server-darwin-x64-b8762.zip",
+                "llama-server-linux-x64-b8762.zip",
+                "llama-server-linux-x64-cuda-b8762.zip",
+                "llama-server-linux-x64-vulkan-b8762.zip",
+                "llama-server-linux-arm64-b8762.zip",
+                "llama-server-linux-arm64-cuda-b8762.zip",
+                "llama-server-linux-armv7l-b8762.zip",
+                "llama-server-win32-x64-b8762.zip",
+                "llama-server-win32-x64-cuda-b8762.zip",
+                "llama-server-win32-x64-vulkan-b8762.zip",
+                "llama-server-win32-arm64-b8762.zip"
+            ]);
     });
 
     test("builds the canonical runtime asset file name from build metadata", () => {

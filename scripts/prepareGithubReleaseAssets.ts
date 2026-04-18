@@ -3,14 +3,20 @@ import path from "path";
 import {fileURLToPath} from "url";
 import fs from "fs-extra";
 import {getPrebuiltBinariesGithubReleaseAssets} from "../src/bindings/utils/prebuiltBinariesGithubReleaseAssets.js";
-import {getLlamaServerGithubReleaseAssetFileNameForBuildMetadata} from "../src/bindings/utils/llamaServerGithubReleaseAssets.js";
-import {buildMetadataFileName} from "../src/config.js";
+import {
+    getLlamaServerGithubReleaseAssetFileName,
+    getLlamaServerGithubReleaseAssetFileNameForBuildMetadata,
+    getLlamaServerGithubReleaseAssets
+} from "../src/bindings/utils/llamaServerGithubReleaseAssets.js";
+import {buildMetadataFileName, llamaCppDirectoryInfoFilePath} from "../src/config.js";
 import {type BuildMetadataFile} from "../src/bindings/types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const binsDirectory = path.join(__dirname, "..", "bins");
 const llamaServerRuntimeBinsDirectory = path.join(__dirname, "..", "llama-server-runtime-bins");
 const releaseAssetsDirectory = path.join(__dirname, "..", ".release-assets");
+const requireAllLlamaServerReleaseAssets = process.env.REQUIRE_ALL_LLAMA_SERVER_RELEASE_ASSETS === "true";
+const preparedLlamaServerAssetFileNames = new Set<string>();
 
 await fs.emptyDir(releaseAssetsDirectory);
 
@@ -82,6 +88,32 @@ for (const runtimeBinsDirectory of [llamaServerRuntimeBinsDirectory, binsDirecto
         const targetPath = path.join(releaseAssetsDirectory, assetFileName);
         await fs.remove(targetPath);
         createZipArchive(folderPath, targetPath);
+        preparedLlamaServerAssetFileNames.add(assetFileName);
         console.info(`Prepared release asset "${assetFileName}"`);
     }
+}
+
+if (requireAllLlamaServerReleaseAssets) {
+    const llamaCppInfo = await fs.readJson(llamaCppDirectoryInfoFilePath).catch(() => null) as {tag?: string} | null;
+    const llamaCppRelease = llamaCppInfo?.tag;
+    if (llamaCppRelease == null || llamaCppRelease === "")
+        throw new Error(`Could not validate llama-server release assets because "${llamaCppDirectoryInfoFilePath}" does not contain a llama.cpp tag`);
+
+    const expectedLlamaServerAssetFileNames = getLlamaServerGithubReleaseAssets()
+        .map((asset) => getLlamaServerGithubReleaseAssetFileName(llamaCppRelease, {
+            platform: asset.platform,
+            arch: asset.arch,
+            gpu: asset.gpu
+        }))
+        .filter((assetFileName): assetFileName is string => assetFileName != null);
+    const missingLlamaServerAssetFileNames = expectedLlamaServerAssetFileNames
+        .filter((assetFileName) => !preparedLlamaServerAssetFileNames.has(assetFileName));
+
+    if (missingLlamaServerAssetFileNames.length > 0)
+        throw new Error(
+            "Missing managed llama-server release assets: " +
+            missingLlamaServerAssetFileNames.join(", ")
+        );
+
+    console.info(`Validated ${expectedLlamaServerAssetFileNames.length} managed llama-server release assets`);
 }
