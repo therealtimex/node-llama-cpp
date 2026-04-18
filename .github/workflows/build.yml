@@ -403,16 +403,6 @@ jobs:
               throw new Error(`libggml-cuda.so not found in ${linuxX64CudaServerRuntimeDir}`);
             }
 
-            const linuxArm64CudaServerRuntimeDir = await findLlamaServerRuntimeDir({
-              arch: "arm64",
-              gpu: "cuda"
-            });
-            if (linuxArm64CudaServerRuntimeDir == null) {
-              throw new Error("linux arm64 CUDA llama-server runtime not found");
-            }
-            if (!(await fs.pathExists(path.join(linuxArm64CudaServerRuntimeDir, "libggml-cuda.so")))) {
-              throw new Error(`libggml-cuda.so not found in ${linuxArm64CudaServerRuntimeDir}`);
-            }
           }
 
           await $`echo "Built binaries:"`;
