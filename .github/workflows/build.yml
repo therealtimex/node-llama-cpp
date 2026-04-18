@@ -188,18 +188,6 @@ jobs:
           cuda: '12.4.0'
           method: 'network'
 
-      - name: Install Cuda 12.4 ARM64 cross target on Ubuntu (2)
-        if: matrix.config.name == 'Ubuntu (2)'
-        run: |
-          if [ ! -f /usr/share/keyrings/cuda-archive-keyring.gpg ]; then
-            wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-            sudo dpkg -i cuda-keyring_1.1-1_all.deb
-            rm -f cuda-keyring_1.1-1_all.deb
-          fi
-          echo "deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/cross-linux-aarch64/ /" | sudo tee /etc/apt/sources.list.d/cuda-ubuntu2204-cross-linux-aarch64.list
-          sudo apt-get update
-          sudo apt-get install cuda-cross-aarch64-12-4
-
       - name: Install Vulkan SDK on Windows (1)
         if: matrix.config.name == 'Windows (1)'
         shell: powershell
@@ -349,7 +337,6 @@ jobs:
           } else if (process.env.ARTIFACT_NAME === "linux-2") {
             await buildBinary("x64", ["--gpu", "cuda"]);
             await buildLlamaServerRuntimeBinary("x64", "cuda");
-            await buildLlamaServerRuntimeBinary("arm64", "cuda");
           } else if (process.env.ARTIFACT_NAME === "mac-x64") {
             await buildBinary("x64", ["--gpu", "false"]);
 

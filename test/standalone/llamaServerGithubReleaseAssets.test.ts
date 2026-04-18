@@ -58,14 +58,6 @@ describe("llamaServerGithubReleaseAssets", () => {
                 },
                 {
                     platform: "linux",
-                    arch: "arm64",
-                    gpu: "cuda",
-                    runtimePlatform: "linux",
-                    runtimeArch: "arm64",
-                    runtimeFlavor: "cuda"
-                },
-                {
-                    platform: "linux",
                     arch: "arm",
                     gpu: false,
                     runtimePlatform: "linux",
@@ -121,26 +113,11 @@ describe("llamaServerGithubReleaseAssets", () => {
 
     test.each([
         [{platform: "mac", arch: "x64", gpu: "metal"}],
+        [{platform: "linux", arch: "arm64", gpu: "cuda"}],
         [{platform: "win", arch: "arm64", gpu: "cuda"}]
     ] as const)("does not resolve non-primary managed server flavor %#", (buildOptions) => {
         expect(getLlamaServerGithubReleaseAssetForBuildOptions(buildOptions))
             .toBeNull();
-    });
-
-    test("resolves the Linux arm64 CUDA runtime asset for DGX Spark", () => {
-        expect(getLlamaServerGithubReleaseAssetForBuildOptions({
-            platform: "linux",
-            arch: "arm64",
-            gpu: "cuda"
-        }))
-            .toEqual({
-                platform: "linux",
-                arch: "arm64",
-                gpu: "cuda",
-                runtimePlatform: "linux",
-                runtimeArch: "arm64",
-                runtimeFlavor: "cuda"
-            });
     });
 
     test("resolves the Linux arm64 CPU fallback runtime asset", () => {
@@ -182,15 +159,6 @@ describe("llamaServerGithubReleaseAssets", () => {
             .toBe("llama-server-darwin-arm64-b8762.zip");
     });
 
-    test("builds the DGX-compatible Linux arm64 CUDA runtime asset file name", () => {
-        expect(getLlamaServerGithubReleaseAssetFileName("b8762", {
-            platform: "linux",
-            arch: "arm64",
-            gpu: "cuda"
-        }))
-            .toBe("llama-server-linux-arm64-cuda-b8762.zip");
-    });
-
     test("builds canonical runtime asset file names for every managed flavor", () => {
         const fileNames = getLlamaServerGithubReleaseAssets()
             .map((asset) => getLlamaServerGithubReleaseAssetFileName("b8762", {
@@ -207,7 +175,6 @@ describe("llamaServerGithubReleaseAssets", () => {
                 "llama-server-linux-x64-cuda-b8762.zip",
                 "llama-server-linux-x64-vulkan-b8762.zip",
                 "llama-server-linux-arm64-b8762.zip",
-                "llama-server-linux-arm64-cuda-b8762.zip",
                 "llama-server-linux-armv7l-b8762.zip",
                 "llama-server-win32-x64-b8762.zip",
                 "llama-server-win32-x64-cuda-b8762.zip",

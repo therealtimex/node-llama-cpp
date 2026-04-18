@@ -61,14 +61,6 @@ const llamaServerRuntimeGithubReleaseAssets: readonly LlamaServerRuntimeGithubRe
     },
     {
         platform: "linux",
-        arch: "arm64",
-        gpu: "cuda",
-        runtimePlatform: "linux",
-        runtimeArch: "arm64",
-        runtimeFlavor: "cuda"
-    },
-    {
-        platform: "linux",
         arch: "arm",
         gpu: false,
         runtimePlatform: "linux",
