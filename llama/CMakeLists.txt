@@ -127,12 +127,25 @@ file(GLOB SOURCE_FILES "addon/*.cpp" "addon/**/*.cpp" ${GPU_INFO_SOURCES})
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC} ${GPU_INFO_HEADERS})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
-target_link_libraries(${PROJECT_NAME} "llama")
-target_link_libraries(${PROJECT_NAME} "common")
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-if (DEFINED GPU_INFO_EXTRA_LIBS)
-    target_link_libraries(${PROJECT_NAME} ${GPU_INFO_EXTRA_LIBS})
+if (TARGET llama-common)
+    set(NLC_LLAMA_COMMON_TARGET llama-common)
+elseif(TARGET common)
+    set(NLC_LLAMA_COMMON_TARGET common)
+else()
+    message(FATAL_ERROR "llama.cpp common target was not found")
+endif()
+
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        ${CMAKE_JS_LIB}
+        llama
+        ${NLC_LLAMA_COMMON_TARGET}
+)
+
+if (GPU_INFO_EXTRA_LIBS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${GPU_INFO_EXTRA_LIBS})
 endif()
 
 if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
