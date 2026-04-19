@@ -437,6 +437,205 @@ jobs:
           name: "llama-server-runtime-${{ matrix.config.artifact }}"
           path: "llama-server-runtime-bins/*"
 
+  build-dgx-spark-binaries:
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || inputs.cuda_ext_publish_test != true) &&
+      (github.event_name != 'workflow_dispatch' || inputs.release_dry_run != true)
+    name: Build binaries - DGX Spark
+    needs:
+      - build
+    runs-on: [self-hosted, Linux, ARM64, dgx-spark, cuda]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: dist
+
+      - name: Download llama.cpp artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llama.cpp
+          path: llama
+
+      - name: Configure DGX Spark CUDA environment
+        shell: bash
+        run: |
+          echo "CUDA_HOME=/usr/local/cuda" >> "$GITHUB_ENV"
+          echo "CUDA_PATH=/usr/local/cuda" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          echo "/usr/local/cuda/bin" >> "$GITHUB_PATH"
+
+          uname -mprs
+          nvidia-smi
+          /usr/local/cuda/bin/nvcc --version
+          cmake --version
+          ninja --version
+
+      - name: Setup & Build
+        id: build
+        shell: bash
+        timeout-minutes: 300
+        env:
+          ARTIFACT_NAME: linux-arm64-cuda
+        run: |
+          npm ci --ignore-scripts
+
+          npx zx -y <<'EOF'
+
+          async function getLatestNodeVersions(maxDate) {
+            const res = await fetch("https://nodejs.org/dist/index.json");
+            const data = await res.json();
+            const versions = new Map();
+            let latestVersion = null;
+
+            for (const version of data) {
+              const majorVersion = Number(version.version.split(".")[0].slice("v".length));
+              const versionDate = new Date(version.date);
+
+              if (maxDate != null && versionDate.getTime() > maxDate)
+                continue;
+
+              if (!versions.has(majorVersion)) {
+                versions.set(majorVersion, version.version);
+              }
+
+              if (latestVersion === null || majorVersion > latestVersion) {
+                latestVersion = majorVersion;
+              }
+            }
+
+            return {versions, latestVersion};
+          }
+
+          const {versions: latestNodeVersions} = await getLatestNodeVersions(Date.now() - 1000 * 60 * 60 * 24 * 14);
+          const nodeVersion = latestNodeVersions.get(20);
+
+          if (nodeVersion == null) {
+            throw new Error("Could not find node 20 version");
+          }
+
+          $.verbose = true;
+          await $`mkdir -p bins`;
+
+          async function buildBinary(arch, flags = [], nodeTarget = nodeVersion) {
+            console.log(`Building ${arch} for node ${nodeTarget} with flags`, flags);
+
+            await $`node ./dist/cli/cli.js source build --ciMode --noUsageExample --arch ${arch} --nodeTarget ${nodeTarget} ${flags}`;
+          }
+
+          const serverBuildCmakeOptions = {
+            LLAMA_BUILD_COMMON: "ON",
+            LLAMA_BUILD_EXAMPLES: "ON",
+            LLAMA_BUILD_SERVER: "ON",
+            LLAMA_BUILD_TESTS: "OFF",
+            LLAMA_BUILD_TOOLS: "ON",
+            LLAMA_CURL: "OFF",
+            LLAMA_HTTPLIB: "ON",
+            LLAMA_OPENSSL: "OFF",
+            LLAMA_BUILD_BORINGSSL: "OFF"
+          };
+
+          async function buildLlamaServerRuntimeBinary(arch, gpu, nodeTarget = nodeVersion) {
+            console.log(`Building managed llama-server runtime ${arch} for node ${nodeTarget} with gpu`, gpu);
+
+            const previousEnvValues = new Map();
+            for (const [optionName, optionValue] of Object.entries(serverBuildCmakeOptions)) {
+              const envName = `NODE_LLAMA_CPP_CMAKE_OPTION_${optionName}`;
+              previousEnvValues.set(envName, process.env[envName]);
+              process.env[envName] = optionValue;
+            }
+
+            try {
+              await buildBinary(arch, ["--gpu", gpu === false ? "false" : gpu], nodeTarget);
+            } finally {
+              for (const [envName, previousValue] of previousEnvValues) {
+                if (previousValue == null)
+                  delete process.env[envName];
+                else
+                  process.env[envName] = previousValue;
+              }
+            }
+          }
+
+          await buildLlamaServerRuntimeBinary("arm64", "cuda");
+
+          const localBuildsDirectoryPath = path.join(process.cwd(), "llama", "localBuilds");
+          const llamaBinsDirectoryPath = path.join(process.cwd(), "bins");
+          for (const folderName of await fs.readdir(localBuildsDirectoryPath)) {
+            await fs.move(
+              path.join(localBuildsDirectoryPath, folderName, "Release"),
+              path.join(llamaBinsDirectoryPath, folderName)
+            );
+          }
+
+          async function findLlamaServerRuntimeDir({arch, gpu}) {
+            for (const folderName of await fs.readdir(llamaBinsDirectoryPath)) {
+              const folderPath = path.join(llamaBinsDirectoryPath, folderName);
+              const metadataPath = path.join(folderPath, "_nlcBuildMetadata.json");
+
+              if (!(await fs.pathExists(path.join(folderPath, "llama-server"))) || !(await fs.pathExists(metadataPath)))
+                continue;
+
+              const metadata = await fs.readJson(metadataPath);
+              if (metadata?.buildOptions?.platform === "linux" && metadata?.buildOptions?.arch === arch && metadata?.buildOptions?.gpu === gpu)
+                return folderPath;
+            }
+
+            return null;
+          }
+
+          const linuxArm64CudaServerRuntimeDir = await findLlamaServerRuntimeDir({
+            arch: "arm64",
+            gpu: "cuda"
+          });
+          if (linuxArm64CudaServerRuntimeDir == null) {
+            throw new Error("linux arm64 CUDA llama-server runtime not found");
+          }
+          if (!(await fs.pathExists(path.join(linuxArm64CudaServerRuntimeDir, "libggml-cuda.so")))) {
+            throw new Error(`libggml-cuda.so not found in ${linuxArm64CudaServerRuntimeDir}`);
+          }
+
+          await $`echo "Built DGX Spark binaries:"`;
+          await $`ls bins`;
+
+          EOF
+
+      - name: Split llama-server runtime artifact
+        shell: bash
+        run: |
+          mkdir -p llama-server-runtime-bins
+
+          find ./bins -mindepth 1 -maxdepth 1 -type d | while read dir; do
+            if [ -f "$dir/llama-server" ]; then
+              mv "$dir" ./llama-server-runtime-bins/
+            fi
+          done
+
+          echo "DGX Spark llama-server runtime binaries:"
+          ls ./llama-server-runtime-bins || true
+
+      - name: Publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          if-no-files-found: ignore
+          name: "bins-linux-arm64-cuda"
+          path: "bins/*"
+
+      - name: Publish llama-server runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: "llama-server-runtime-linux-arm64-cuda"
+          path: "llama-server-runtime-bins/*"
+
   release-dry-run:
     name: Release dry run
     if: github.event_name == 'workflow_dispatch' && inputs.release_dry_run == true
@@ -587,6 +786,7 @@ jobs:
     needs:
       - build
       - build-binaries
+      - build-dgx-spark-binaries
     steps:
       - uses: actions/checkout@v4
         with:
