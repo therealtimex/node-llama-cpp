@@ -39,12 +39,12 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Install modules
         run: npm ci --ignore-scripts
       - name: Build
@@ -69,19 +69,19 @@ jobs:
           CI: true
         run: node ./dist/cli/cli.js source download --release "${{ steps.resolveLlamaCppRelease.outputs.release }}" --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: "build"
           path: "dist"
       - name: Upload packed templates artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: "build-templates"
           path: "templates/packed"
       - name: Upload llama.cpp artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: "llama.cpp"
@@ -103,19 +103,19 @@ jobs:
         config: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.release_dry_run == true) && '[{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]' || '[{"name":"Windows (1)","os":"windows-2022","artifact":"win-1"},{"name":"Windows (2)","os":"windows-2022","artifact":"win-2"},{"name":"Ubuntu (1)","os":"ubuntu-22.04","artifact":"linux-1"},{"name":"Ubuntu (2)","os":"ubuntu-22.04","artifact":"linux-2"},{"name":"macOS x64","os":"macos-15-intel","artifact":"mac-x64"},{"name":"macOS arm64","os":"macos-26","artifact":"mac-arm64"}]') }}
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build
           path: dist
 
       - name: Download llama.cpp artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: llama.cpp
           path: llama
@@ -424,13 +424,13 @@ jobs:
           echo "Llama server runtime binaries:"
           ls ./llama-server-runtime-bins || true
       - name: Publish artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: "bins-${{ matrix.config.artifact }}"
           path: "bins/*"
       - name: Publish llama-server runtime artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           if-no-files-found: ignore
@@ -447,19 +447,19 @@ jobs:
       - build
     runs-on: [self-hosted, Linux, ARM64, dgx-spark, cuda]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build
           path: dist
 
       - name: Download llama.cpp artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: llama.cpp
           path: llama
@@ -622,7 +622,7 @@ jobs:
           ls ./llama-server-runtime-bins || true
 
       - name: Publish artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           if-no-files-found: ignore
@@ -630,7 +630,7 @@ jobs:
           path: "bins/*"
 
       - name: Publish llama-server runtime artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           include-hidden-files: true
           name: "llama-server-runtime-linux-arm64-cuda"
@@ -650,18 +650,18 @@ jobs:
       - build
       - build-binaries
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
           lfs: true
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Install modules
         run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Move smoke artifacts
@@ -719,15 +719,15 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
           lfs: true
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Install modules
         run: npm ci --ignore-scripts
       - name: Download CUDA ext release assets
@@ -788,18 +788,18 @@ jobs:
       - build-binaries
       - build-dgx-spark-binaries
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
           lfs: true
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Install modules
         run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifacts
       - name: Move artifacts
